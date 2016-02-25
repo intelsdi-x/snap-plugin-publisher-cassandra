@@ -1,0 +1,16 @@
+{
+	"ImportPath": "github.com/intelsdi-x/snap-plugin-publisher-cassandra",
+	"GoVersion": "go1.5",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.7.3",
+			"Rev": "55eb11d21d2a31a3cc93838241d04800f52e823d"
+		},
+		{
+			"ImportPath": "github.com/gocql/gocql",
+			"Comment": "pre-node-events-219-g03ae28c",
+			"Rev": "03ae28ccfc4fa086afea7fcec681bf7ff60f0346"
+		}
+	]
+}
