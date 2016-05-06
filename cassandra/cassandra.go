@@ -34,7 +34,7 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 1
+	version    = 2
 	pluginType = plugin.PublisherPluginType
 
 	serverAddr    = "server"
@@ -76,7 +76,7 @@ func (cas *CassandraPublisher) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) 
 // Publish publishes metric data to Cassandra
 func (cas *CassandraPublisher) Publish(contentType string, content []byte, config map[string]ctypes.ConfigValue) error {
 	logger := getLogger(config)
-	var metrics []plugin.PluginMetricType
+	var metrics []plugin.MetricType
 
 	switch contentType {
 	case plugin.SnapGOBContentType:
