@@ -49,12 +49,11 @@ func TestCassandraPublish(t *testing.T) {
 
 		config["server"] = ctypes.ConfigValueStr{Value: hostip}
 
-		tags := map[string]string{"zone": "red"}
-		labels := []core.Label{core.Label{Index: 1, Name: "node"}}
+		tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname"}
 
 		Convey("Publish integer metric", func() {
-			metrics := []plugin.PluginMetricType{
-				*plugin.NewPluginMetricType([]string{"foo"}, time.Now(), hostip, tags, labels, 99),
+			metrics := []plugin.MetricType{
+				*plugin.NewMetricType(core.NewNamespace("foo"), time.Now(), tags, "int", 99),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)
@@ -64,8 +63,8 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish float metric", func() {
-			metrics := []plugin.PluginMetricType{
-				*plugin.NewPluginMetricType([]string{"bar"}, time.Now(), hostip, tags, labels, 3.141),
+			metrics := []plugin.MetricType{
+				*plugin.NewMetricType(core.NewNamespace("bar"), time.Now(), tags, "float64", 3.141),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)
@@ -75,8 +74,8 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish string metric", func() {
-			metrics := []plugin.PluginMetricType{
-				*plugin.NewPluginMetricType([]string{"qux"}, time.Now(), hostip, tags, labels, "bar"),
+			metrics := []plugin.MetricType{
+				*plugin.NewMetricType(core.NewNamespace("qux"), time.Now(), tags, "string", "bar"),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)
@@ -86,8 +85,8 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish boolean metric", func() {
-			metrics := []plugin.PluginMetricType{
-				*plugin.NewPluginMetricType([]string{"baz"}, time.Now(), hostip, tags, labels, true),
+			metrics := []plugin.MetricType{
+				*plugin.NewMetricType(core.NewNamespace("baz"), time.Now(), tags, "bool", true),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)
@@ -97,8 +96,8 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish map metric", func() {
-			metrics := []plugin.PluginMetricType{
-				*plugin.NewPluginMetricType([]string{"invalid/data/type"}, time.Now(), hostip, tags, labels, map[string]string{"foo": "bar"}),
+			metrics := []plugin.MetricType{
+				*plugin.NewMetricType(core.NewNamespace("invalid/data/type"), time.Now(), tags, "map", map[string]string{"foo": "bar"}),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)
@@ -108,12 +107,12 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish multiple metrics", func() {
-			metrics := []plugin.PluginMetricType{
-				*plugin.NewPluginMetricType([]string{"integer"}, time.Now(), hostip, tags, labels, 101),
-				*plugin.NewPluginMetricType([]string{"float"}, time.Now(), hostip, tags, labels, 5.789),
-				*plugin.NewPluginMetricType([]string{"string"}, time.Now(), hostip, tags, labels, "test"),
-				*plugin.NewPluginMetricType([]string{"boolean"}, time.Now(), hostip, tags, labels, true),
-				*plugin.NewPluginMetricType([]string{"test-123"}, time.Now(), hostip, tags, labels, -101),
+			metrics := []plugin.MetricType{
+				*plugin.NewMetricType(core.NewNamespace("integer"), time.Now(), tags, "int", 101),
+				*plugin.NewMetricType(core.NewNamespace("float"), time.Now(), tags, "float64", 5.789),
+				*plugin.NewMetricType(core.NewNamespace("string"), time.Now(), tags, "string", "test"),
+				*plugin.NewMetricType(core.NewNamespace("boolean"), time.Now(), tags, "boolean", true),
+				*plugin.NewMetricType(core.NewNamespace("test-123"), time.Now(), tags, "int", -101),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)

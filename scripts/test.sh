@@ -32,7 +32,6 @@ if [[ $TEST_SUITE == "unit" ]]; then
 	go get github.com/axw/gocov/gocov
 	go get github.com/mattn/goveralls
 	go get -u github.com/golang/lint/golint
-	go get golang.org/x/tools/cmd/vet
 	go get golang.org/x/tools/cmd/goimports
 	go get github.com/smartystreets/goconvey/convey
 	go get github.com/smartystreets/assertions
@@ -105,5 +104,5 @@ elif [[ $TEST_SUITE == "integration" ]]; then
 	go get github.com/smartystreets/assertions
 	
 	cd $SNAP_PLUGIN_SOURCE
-	SNAP_INFLUXDB_HOST=127.0.0.1 go test -v --tags=integration ./...
+	SNAP_CASSANDRA_HOST=127.0.0.1 go test -v --tags=integration ./...
 fi
