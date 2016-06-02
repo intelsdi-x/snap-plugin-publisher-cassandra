@@ -72,7 +72,6 @@ CREATE TABLE snap.metrics (
 	doubleVal double, 
     boolVal boolean,
     strVal text,
-	labels list<text>, 
 	tags map<text,text>, 
 	PRIMARY KEY ((ns, ver, host), time)
 ) WITH CLUSTERING ORDER BY (time DESC);
@@ -189,17 +188,17 @@ Sample snap cassandra CQL shown:
 ```
 cqlsh:snap> select * from metrics limit 100;
 
- ns                      | ver | host          | time                     | boolval | doubleval | labels | strval | tags | valtype
--------------------------+-----+---------------+--------------------------+---------+-----------+--------+--------+------+---------
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:52+0000 |    null |      2.44 |   null |   null | null |  double
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:51+0000 |    null |      2.44 |   null |   null | null |  double
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:50+0000 |    null |      2.57 |   null |   null | null |  double
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:49+0000 |    null |      2.57 |   null |   null | null |  double
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:48+0000 |    null |      2.57 |   null |   null | null |  double
+ ns                      | ver | host          | time                     | boolval | doubleval | strval | tags | valtype
+-------------------------+-----+---------------+--------------------------+---------+-----------+--------+------+---------
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:52+0000 |    null |      2.44 |   null | null |  double
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:51+0000 |    null |      2.44 |   null | null |  double
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:50+0000 |    null |      2.57 |   null | null |  double
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:49+0000 |    null |      2.57 |   null | null |  double
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:04:48+0000 |    null |      2.57 |   null | null |  double
  ...
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:03:15+0000 |    null |      3.22 |   null |   null | null |  double
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:03:14+0000 |    null |      3.22 |   null |   null | null |  double
- intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:03:13+0000 |    null |      3.22 |   null |   null | null |  double
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:03:15+0000 |    null |      3.22 |   null | null |  double
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:03:14+0000 |    null |      3.22 |   null | null |  double
+ intel/psutil/load/load1 |   0 | egu-mac01.lan | 2016-03-29 03:03:13+0000 |    null |      3.22 |   null | null |  double
 
 (100 rows)
 cqlsh:snap>
