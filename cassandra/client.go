@@ -38,6 +38,7 @@ var (
 
 	createKeyspaceCQL = "CREATE KEYSPACE IF NOT EXISTS snap WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};"
 	createTableCQL    = "CREATE TABLE IF NOT EXISTS snap.metrics (ns  text, ver int, host text, time timestamp, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((ns, ver, host), time),) WITH CLUSTERING ORDER BY (time DESC);"
+	createIndexCQL    = "CREATE INDEX tags on snap.metrics (ENTRIES(tags));"
 )
 
 func NewCassaClient(server string) *cassaClient {
@@ -193,5 +194,10 @@ func getSession(server string) *gocql.Session {
 	if err := session.Query(createTableCQL).Exec(); err != nil {
 		log.Fatal(err.Error())
 	}
+
+	if err := session.Query(createIndexCQL).Exec(); err != nil {
+		log.Fatal(err.Error())
+	}
+
 	return session
 }

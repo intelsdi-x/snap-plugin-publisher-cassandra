@@ -75,6 +75,7 @@ CREATE TABLE snap.metrics (
 	tags map<text,text>, 
 	PRIMARY KEY ((ns, ver, host), time)
 ) WITH CLUSTERING ORDER BY (time DESC);
+CREATE INDEX tags on snap.metrics (ENTRIES(tags));
 ```
 
 ### Examples
