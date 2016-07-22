@@ -101,7 +101,9 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 
 // Close closes the Cassandra client session
 func (cas *CassandraPublisher) Close() {
-	cas.client.session.Close()
+	if cas.client != nil {
+		cas.client.session.Close()
+	}
 }
 
 func getServerAddress(cfg map[string]ctypes.ConfigValue) string {
