@@ -123,11 +123,11 @@ Loaded Time: Thu, 25 Feb 2016 13:00:24 PST
 
 Load snap passthrough processor plugin
 ```
-$ $SNAP_PATH/bin/snapctl plugin load $SNAP_PATH/plugin/snap-processor-passthru
+$ $SNAP_PATH/bin/snapctl plugin load $SNAP_PATH/plugin/snap-plugin-processor-passthru
 Plugin loaded
-Name: psutil
-Version: 5
-Type: collector
+Name: passthru
+Version: 1
+Type: processor
 Signed: false
 Loaded Time: Thu, 25 Feb 2016 13:00:35 PST
 ```

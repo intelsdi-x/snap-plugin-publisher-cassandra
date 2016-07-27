@@ -21,8 +21,6 @@ limitations under the License.
 package cassandra
 
 import (
-	"log"
-	"os"
 	"testing"
 
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -45,7 +43,7 @@ func TestCassandraDBPlugin(t *testing.T) {
 			So(ip, ShouldNotBeNil)
 		})
 		Convey("So ip should be of cassandraPublisher type", func() {
-			So(ip, ShouldHaveSameTypeAs, &cassandraPublisher{})
+			So(ip, ShouldHaveSameTypeAs, &CassandraPublisher{})
 		})
 		configPolicy, err := ip.GetConfigPolicy()
 		Convey("ip.GetConfigPolicy() should return a config policy", func() {
@@ -60,13 +58,7 @@ func TestCassandraDBPlugin(t *testing.T) {
 			})
 			testConfig := make(map[string]ctypes.ConfigValue)
 
-			hostip := os.Getenv("SNAP_CASSANDRA_HOST")
-			if len(hostip) == 0 {
-				log.Fatal("SNAP_CASSANDRA_HOST is not set")
-			}
-
-			testConfig["host"] = ctypes.ConfigValueStr{Value: hostip}
-			testConfig["port"] = ctypes.ConfigValueInt{Value: 9042}
+			testConfig["server"] = ctypes.ConfigValueStr{Value: "127.0.0.1"}
 			cfg, errs := configPolicy.Get([]string{""}).Process(testConfig)
 			Convey("So config policy should process testConfig and return a config", func() {
 				So(cfg, ShouldNotBeNil)
@@ -74,6 +66,8 @@ func TestCassandraDBPlugin(t *testing.T) {
 			Convey("So testConfig processing should return no errors", func() {
 				So(errs.HasErrors(), ShouldBeFalse)
 			})
+
+			testConfig = make(map[string]ctypes.ConfigValue)
 			testConfig["port"] = ctypes.ConfigValueStr{Value: "9042"}
 			cfg, errs = configPolicy.Get([]string{""}).Process(testConfig)
 			Convey("So config policy should not return a config after processing invalid testConfig", func() {
