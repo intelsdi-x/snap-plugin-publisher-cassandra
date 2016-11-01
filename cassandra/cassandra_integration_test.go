@@ -31,7 +31,6 @@ import (
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/core"
 	"github.com/intelsdi-x/snap/core/ctypes"
-
 	. "github.com/smartystreets/goconvey/convey"
 )
 

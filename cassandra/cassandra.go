@@ -22,6 +22,7 @@ package cassandra
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -30,7 +31,6 @@ import (
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
 	"github.com/intelsdi-x/snap/core/ctypes"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -189,7 +189,7 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 	if useSslOptions {
 		sslOptions, err = getSslOptions(config)
 		if err != nil {
-			logger.Fatal(err)
+			logger.Error(err)
 			return err
 		}
 	}
@@ -299,8 +299,9 @@ func getSslOptions(cfg map[string]ctypes.ConfigValue) (*SslOptions, error) {
 	}
 	// Check whether necessary options were set.
 	if options.keyPath == "" || options.certPath == "" || options.caPath == "" {
-		return &options, errors.Errorf("While using ssl, %s, %s and %s have to be specified in the plugin config",
+		errorMsg := fmt.Sprintf("While using ssl, %s, %s and %s have to be specified in the plugin config",
 			keyPathRuleKey, certPathRuleKey, caPathRuleKey)
+		return &options, errors.New(errorMsg)
 	}
 	return &options, nil
 }
