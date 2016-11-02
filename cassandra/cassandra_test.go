@@ -37,7 +37,6 @@ func TestCassandraDBPlugin(t *testing.T) {
 		username                     = "username"
 		password                     = "password"
 		path                         = "/some/path"
-		timeout                      = 10
 		enableServerCertVerification = false
 	)
 	Convey("Meta should return metadata for the plugin", t, func() {

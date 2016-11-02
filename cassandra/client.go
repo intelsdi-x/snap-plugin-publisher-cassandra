@@ -57,7 +57,6 @@ type sslOptions struct {
 	certPath                     string
 	caPath                       string
 	enableServerCertVerification bool
-	timeout                      time.Duration
 }
 
 var instance *gocql.Session
