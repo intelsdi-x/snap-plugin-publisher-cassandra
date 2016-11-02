@@ -23,7 +23,6 @@ package cassandra
 import (
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
@@ -31,17 +30,16 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-const (
-	serverAddress                = "127.0.0.1"
-	sslOptionsFlag               = true
-	username                     = "username"
-	password                     = "password"
-	path                         = "/some/path"
-	timeout                      = 10
-	enableServerCertVerification = false
-)
-
 func TestCassandraDBPlugin(t *testing.T) {
+	const (
+		serverAddress                = "127.0.0.1"
+		sslOptionsFlag               = true
+		username                     = "username"
+		password                     = "password"
+		path                         = "/some/path"
+		timeout                      = 10
+		enableServerCertVerification = false
+	)
 	Convey("Meta should return metadata for the plugin", t, func() {
 		meta := Meta()
 		So(meta.Name, ShouldResemble, name)
@@ -79,7 +77,8 @@ func TestCassandraDBPlugin(t *testing.T) {
 				So(errs.HasErrors(), ShouldBeFalse)
 			})
 			Convey("So getting the server address should return a proper value", func() {
-				receivedServerAddress := getServerAddress(testConfig)
+				receivedServerAddress, ok := getValueForKey(testConfig, serverAddrRuleKey).(string)
+				So(ok, ShouldBeTrue)
 				So(receivedServerAddress, ShouldEqual, serverAddress)
 				So(reflect.TypeOf(receivedServerAddress).String(), ShouldEqual, "string")
 			})
@@ -95,13 +94,12 @@ func TestCassandraDBPlugin(t *testing.T) {
 			})
 
 			// Prepare ssl options struct with expected values.
-			expectedSslOptions := &SslOptions{
+			expectedSslOptions := &sslOptions{
 				username: username,
 				password: password,
 				certPath: path,
 				caPath:   path,
 				keyPath:  path,
-				timeout:  time.Duration(timeout) * time.Second,
 				enableServerCertVerification: enableServerCertVerification,
 			}
 
@@ -114,7 +112,6 @@ func TestCassandraDBPlugin(t *testing.T) {
 			testConfig[caPathRuleKey] = ctypes.ConfigValueStr{Value: path}
 			testConfig[certPathRuleKey] = ctypes.ConfigValueStr{Value: path}
 			testConfig[keyPathRuleKey] = ctypes.ConfigValueStr{Value: path}
-			testConfig[timeoutRuleKey] = ctypes.ConfigValueInt{Value: timeout}
 			testConfig[enableServerCertVerRuleKey] = ctypes.ConfigValueBool{Value: enableServerCertVerification}
 
 			cfg, errs = configPolicy.Get([]string{""}).Process(testConfig)
@@ -150,9 +147,6 @@ func TestCassandraDBPlugin(t *testing.T) {
 			})
 			Convey("So after adding ssl options a cluster should have a proper key path", func() {
 				So(clusterWithSslOptions.SslOpts.KeyPath, ShouldEqual, expectedSslOptions.keyPath)
-			})
-			Convey("So after adding ssl options a cluster should have a proper timeout", func() {
-				So(clusterWithSslOptions.Timeout, ShouldEqual, expectedSslOptions.timeout)
 			})
 		})
 	})

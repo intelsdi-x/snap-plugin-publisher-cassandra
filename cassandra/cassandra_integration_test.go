@@ -57,7 +57,8 @@ func TestCassandraPublish(t *testing.T) {
 		}
 
 		config[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: hostip}
-		config[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: sslOptionsRuleDefault}
+		config[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: false}
+		config[timeoutRuleKey] = ctypes.ConfigValueInt{Value: 0}
 
 		tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname"}
 
