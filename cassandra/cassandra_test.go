@@ -123,12 +123,9 @@ func TestCassandraDBPlugin(t *testing.T) {
 			})
 
 			// Get ssl options from the test config.
-			receivedSslOptions, err := getSslOptions(testConfig)
+			receivedSslOptions := getSslOptions(testConfig)
 			Convey("So received ssl options struct should have proper values for all keys", func() {
 				So(reflect.DeepEqual(expectedSslOptions, receivedSslOptions), ShouldBeTrue)
-			})
-			Convey("So getting ssl options for valid config should not return any error", func() {
-				So(err, ShouldBeNil)
 			})
 
 			// Prepare cluster for a given address.

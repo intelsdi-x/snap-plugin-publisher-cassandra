@@ -145,13 +145,8 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 	checkAssertion(ok, sslOptionsRuleKey)
 
 	var sslOptions *sslOptions
-	var err error
 	if useSslOptions {
-		sslOptions, err = getSslOptions(config)
-		if err != nil {
-			logger.Error(err)
-			return err
-		}
+		sslOptions = getSslOptions(config)
 	}
 
 	timeout, ok := getValueForKey(config, timeoutRuleKey).(int)
@@ -196,7 +191,7 @@ func getValueForKey(cfg map[string]ctypes.ConfigValue, key string) interface{} {
 	return value
 }
 
-func getSslOptions(cfg map[string]ctypes.ConfigValue) (*sslOptions, error) {
+func getSslOptions(cfg map[string]ctypes.ConfigValue) *sslOptions {
 	username, ok := getValueForKey(cfg, usernameRuleKey).(string)
 	checkAssertion(ok, usernameRuleKey)
 	password, ok := getValueForKey(cfg, passwordRuleKey).(string)
@@ -218,13 +213,7 @@ func getSslOptions(cfg map[string]ctypes.ConfigValue) (*sslOptions, error) {
 		caPath:   caPath,
 		enableServerCertVerification: enableServerCertVerification,
 	}
-	// Check whether necessary options were set.
-	if options.keyPath == "" || options.certPath == "" || options.caPath == "" {
-		errorMsg := fmt.Sprintf("While using ssl, %s, %s and %s have to be specified in the plugin config",
-			keyPathRuleKey, certPathRuleKey, caPathRuleKey)
-		return &options, errors.New(errorMsg)
-	}
-	return &options, nil
+	return &options
 }
 
 func handleErr(e error) {
