@@ -188,12 +188,12 @@ The example task manifest file, cassandra-task.json:
 Snap cassandra publisher allows also for configuring ssl encryption.
 To enable ssl, a flag `ssl` has to be set to true in the plugin config.
 It is possible to configure following ssl options:
-`username` - Name of a user used to authenticate to Cassandra
-`password` - Password used to authenticate to the Cassandra
-`keyPath` - Path to the private key for the Cassandra client
-`certPath` - Path to the self signed certificate for the Cassandra client
-`caPath` - Path to the CA certificate for the Cassandra server
-`serverCertVerification` - If true, verify a hostname and a server key, default: true
+* `username` - Name of a user used to authenticate to Cassandra
+* `password` - Password used to authenticate to the Cassandra
+* `keyPath` - Path to the private key for the Cassandra client
+* `certPath` - Path to the self signed certificate for the Cassandra client
+* `caPath` - Path to the CA certificate for the Cassandra server
+* `serverCertVerification` - If true, verify a hostname and a server key, default: true
 
 Sample snap cassandra CQL shown:
 ```

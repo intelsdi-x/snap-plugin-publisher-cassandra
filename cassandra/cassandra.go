@@ -35,7 +35,7 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 2
+	version    = 3
 	pluginType = plugin.PublisherPluginType
 
 	serverAddrRuleKey          = "server"
@@ -106,14 +106,12 @@ func (cas *CassandraPublisher) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) 
 	caPathRule.Description = "Path to the CA certificate for the Cassandra server"
 	config.Add(caPathRule)
 
-	enableServerCertVerRule, err := cpolicy.NewBoolRule(
-		"serverCertVerification", false, true)
+	enableServerCertVerRule, err := cpolicy.NewBoolRule("serverCertVerification", false, true)
 	handleErr(err)
 	enableServerCertVerRule.Description = "If true, verify a hostname and a server key, default: true"
 	config.Add(enableServerCertVerRule)
 
-	timeout, err := cpolicy.NewIntegerRule(
-		"timeout", false, 0)
+	timeout, err := cpolicy.NewIntegerRule("timeout", false, 0)
 	handleErr(err)
 	timeout.Description = "Connection timeout in seconds, defaul: 0s"
 	config.Add(timeout)
@@ -141,20 +139,24 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 		return fmt.Errorf("Unknown content type '%s'", contentType)
 	}
 
-	useSslOptions, ok := getValueForKey(config, sslOptionsRuleKey).(bool)
-	checkAssertion(ok, sslOptionsRuleKey)
-
-	var sslOptions *sslOptions
-	if useSslOptions {
-		sslOptions = getSslOptions(config)
-	}
-
-	timeout, ok := getValueForKey(config, timeoutRuleKey).(int)
-	checkAssertion(ok, timeoutRuleKey)
-	serverAddr, ok := getValueForKey(config, serverAddrRuleKey).(string)
-	checkAssertion(ok, serverAddrRuleKey)
 	// Only initialize client once if possible
 	if cas.client == nil {
+		// Get all values for a new client.
+		useSslOptions, ok := getValueForKey(config, sslOptionsRuleKey).(bool)
+		checkAssertion(ok, sslOptionsRuleKey)
+
+		var sslOptions *sslOptions
+		if useSslOptions {
+			logger.Debug("using ssl options")
+			sslOptions = getSslOptions(config)
+		}
+
+		timeout, ok := getValueForKey(config, timeoutRuleKey).(int)
+		checkAssertion(ok, timeoutRuleKey)
+		serverAddr, ok := getValueForKey(config, serverAddrRuleKey).(string)
+		checkAssertion(ok, serverAddrRuleKey)
+
+		// Initialize a new client.
 		cas.client = NewCassaClient(serverAddr, sslOptions,
 			time.Duration(timeout)*time.Second)
 	}
@@ -170,12 +172,12 @@ func (cas *CassandraPublisher) Close() {
 
 func getValueForKey(cfg map[string]ctypes.ConfigValue, key string) interface{} {
 	if cfg == nil {
-		log.Fatal("Configuration of a plugin not found")
+		log.Error("Configuration of a plugin not found")
 	}
 	configElem := cfg[key]
 
 	if configElem == nil {
-		log.Fatalf("Valid configuration not found for a key %s", key)
+		log.Errorf("Valid configuration not found for a key %s", key)
 	}
 	var value interface{}
 	switch configElem.Type() {
@@ -186,7 +188,7 @@ func getValueForKey(cfg map[string]ctypes.ConfigValue, key string) interface{} {
 	case "integer":
 		value = configElem.(ctypes.ConfigValueInt).Value
 	default:
-		log.Fatalf("Proper value type not found for a key %s", key)
+		log.Errorf("Proper value type not found for a key %s", key)
 	}
 	return value
 }
@@ -224,9 +226,9 @@ func handleErr(e error) {
 
 func checkAssertion(ok bool, key string) {
 	if !ok {
-		errorMsg := fmt.Sprintf("Invalid data type for a key %s", sslOptionsRuleKey)
+		errorMsg := fmt.Sprintf("Invalid data type for a key %s", key)
 		err := errors.New(errorMsg)
-		log.Fatal(err)
+		log.Error(err)
 	}
 }
 

@@ -30,15 +30,17 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+const (
+	serverAddress                = "127.0.0.1"
+	sslOptionsFlag               = true
+	username                     = "username"
+	password                     = "password"
+	path                         = "/some/path"
+	enableServerCertVerification = false
+)
+
 func TestCassandraDBPlugin(t *testing.T) {
-	const (
-		serverAddress                = "127.0.0.1"
-		sslOptionsFlag               = true
-		username                     = "username"
-		password                     = "password"
-		path                         = "/some/path"
-		enableServerCertVerification = false
-	)
+
 	Convey("Meta should return metadata for the plugin", t, func() {
 		meta := Meta()
 		So(meta.Name, ShouldResemble, name)
@@ -91,59 +93,104 @@ func TestCassandraDBPlugin(t *testing.T) {
 			Convey("So testConfig processing should return errors", func() {
 				So(errs.HasErrors(), ShouldBeTrue)
 			})
+		})
+	})
+}
 
-			// Prepare ssl options struct with expected values.
-			expectedSslOptions := &sslOptions{
-				username: username,
-				password: password,
-				certPath: path,
-				caPath:   path,
-				keyPath:  path,
-				enableServerCertVerification: enableServerCertVerification,
-			}
+func TestSslOptions(t *testing.T) {
+	Convey("Create plugin", t, func() {
+		ip := NewCassandraPublisher()
+		Convey("So ip should not be nil", func() {
+			So(ip, ShouldNotBeNil)
+		})
+		Convey("So ip should be of cassandraPublisher type", func() {
+			So(ip, ShouldHaveSameTypeAs, &CassandraPublisher{})
+		})
+		configPolicy, err := ip.GetConfigPolicy()
+		Convey("So config policy should not be nil", func() {
+			So(configPolicy, ShouldNotBeNil)
+		})
+		Convey("So we should not get an err retreiving the config policy", func() {
+			So(err, ShouldBeNil)
+		})
+		// Prepare ssl options struct with expected values.
+		expectedSslOptions := &sslOptions{
+			username: username,
+			password: password,
+			certPath: path,
+			caPath:   path,
+			keyPath:  path,
+			enableServerCertVerification: enableServerCertVerification,
+		}
 
-			// Prepare test config with ssl options.
-			testConfig = make(map[string]ctypes.ConfigValue)
-			testConfig[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: serverAddress}
-			testConfig[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: sslOptionsFlag}
-			testConfig[usernameRuleKey] = ctypes.ConfigValueStr{Value: username}
-			testConfig[passwordRuleKey] = ctypes.ConfigValueStr{Value: password}
-			testConfig[caPathRuleKey] = ctypes.ConfigValueStr{Value: path}
-			testConfig[certPathRuleKey] = ctypes.ConfigValueStr{Value: path}
-			testConfig[keyPathRuleKey] = ctypes.ConfigValueStr{Value: path}
-			testConfig[enableServerCertVerRuleKey] = ctypes.ConfigValueBool{Value: enableServerCertVerification}
+		// Prepare test config with ssl options.
+		testConfig := make(map[string]ctypes.ConfigValue)
+		testConfig[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: serverAddress}
+		testConfig[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: sslOptionsFlag}
+		testConfig[usernameRuleKey] = ctypes.ConfigValueStr{Value: username}
+		testConfig[passwordRuleKey] = ctypes.ConfigValueStr{Value: password}
+		testConfig[caPathRuleKey] = ctypes.ConfigValueStr{Value: path}
+		testConfig[certPathRuleKey] = ctypes.ConfigValueStr{Value: path}
+		testConfig[keyPathRuleKey] = ctypes.ConfigValueStr{Value: path}
+		testConfig[enableServerCertVerRuleKey] = ctypes.ConfigValueBool{Value: enableServerCertVerification}
 
-			cfg, errs = configPolicy.Get([]string{""}).Process(testConfig)
-			Convey("So config policy should return a config after processing testConfig with valid ssl options", func() {
-				So(cfg, ShouldNotBeNil)
-			})
-			Convey("So testConfig processing should not return errors", func() {
-				So(errs.HasErrors(), ShouldBeFalse)
-			})
+		cfg, errs := configPolicy.Get([]string{""}).Process(testConfig)
+		Convey("So config policy should return a config after processing testConfig with valid ssl options", func() {
+			So(cfg, ShouldNotBeNil)
+		})
+		Convey("So testConfig processing should not return errors", func() {
+			So(errs.HasErrors(), ShouldBeFalse)
+		})
 
-			// Get ssl options from the test config.
-			receivedSslOptions := getSslOptions(testConfig)
-			Convey("So received ssl options struct should have proper values for all keys", func() {
-				So(reflect.DeepEqual(expectedSslOptions, receivedSslOptions), ShouldBeTrue)
-			})
+		// Get ssl options from the test config.
+		receivedSslOptions := getSslOptions(testConfig)
+		Convey("So received ssl options struct should have proper values for all keys", func() {
+			So(reflect.DeepEqual(expectedSslOptions, receivedSslOptions), ShouldBeTrue)
+		})
 
-			// Prepare cluster for a given address.
-			cluster := createCluster(serverAddress)
-			Convey("So while creating cluster it should not be nil", func() {
-				So(cluster, ShouldNotBeNil)
-			})
+		// Prepare cluster for a given address.
+		cluster := createCluster(serverAddress)
+		Convey("So while creating cluster it should not be nil", func() {
+			So(cluster, ShouldNotBeNil)
+		})
 
-			// 'Decorate' prepared cluster with received ssl options.
-			clusterWithSslOptions := addSslOptions(cluster, receivedSslOptions)
-			Convey("So after adding ssl options a cluster should have a proper ca path", func() {
-				So(clusterWithSslOptions.SslOpts.CaPath, ShouldEqual, expectedSslOptions.caPath)
-			})
-			Convey("So after adding ssl options a cluster should have a proper cert path", func() {
-				So(clusterWithSslOptions.SslOpts.CertPath, ShouldEqual, expectedSslOptions.certPath)
-			})
-			Convey("So after adding ssl options a cluster should have a proper key path", func() {
-				So(clusterWithSslOptions.SslOpts.KeyPath, ShouldEqual, expectedSslOptions.keyPath)
-			})
+		// 'Decorate' prepared cluster with received ssl options.
+		clusterWithSslOptions := addSslOptions(cluster, receivedSslOptions)
+		Convey("So after adding ssl options a cluster should have a proper ca path", func() {
+			So(clusterWithSslOptions.SslOpts.CaPath, ShouldEqual, expectedSslOptions.caPath)
+		})
+		Convey("So after adding ssl options a cluster should have a proper cert path", func() {
+			So(clusterWithSslOptions.SslOpts.CertPath, ShouldEqual, expectedSslOptions.certPath)
+		})
+		Convey("So after adding ssl options a cluster should have a proper key path", func() {
+			So(clusterWithSslOptions.SslOpts.KeyPath, ShouldEqual, expectedSslOptions.keyPath)
+		})
+
+		// Prepare test config with invalid ssl options.
+		testConfig = make(map[string]ctypes.ConfigValue)
+		testConfig[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: serverAddress}
+		testConfig[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: sslOptionsFlag}
+		testConfig[usernameRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[passwordRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[caPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[certPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[keyPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[enableServerCertVerRuleKey] = ctypes.ConfigValueStr{Value: ""}
+
+		cfg, errs = configPolicy.Get([]string{""}).Process(testConfig)
+		Convey("So config policy should not return a config after processing testConfig with invalid ssl options", func() {
+			So(cfg, ShouldBeNil)
+		})
+		Convey("So testConfig processing should return errors", func() {
+			So(errs.HasErrors(), ShouldBeTrue)
+		})
+		sslOpts := getSslOptions(testConfig)
+		Convey("So getting ssl options for invalid config should return an empty ssl struct", func() {
+			So(sslOpts.keyPath, ShouldEqual, "")
+			So(sslOpts.certPath, ShouldEqual, "")
+			So(sslOpts.caPath, ShouldEqual, "")
+			So(sslOpts.username, ShouldEqual, "")
+			So(sslOpts.password, ShouldEqual, "")
 		})
 	})
 }
