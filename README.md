@@ -20,7 +20,7 @@ It's used in the [snap framework](http://github.com/intelsdi-x/snap).
 ### System Requirements
 * [snap] (https://github.com/intelsdi-x/snap)
 * [cassandra latest(3.3)](http://cassandra.apache.org)
-* [golang 1.5+](https://golang.org/dl/)
+* [golang 1.6+](https://golang.org/dl/)
 
 ### Operating systems
 All OSs currently supported by snap:
