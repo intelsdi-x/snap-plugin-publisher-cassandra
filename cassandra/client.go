@@ -206,17 +206,29 @@ func getSession(server string, sslCassOptions *sslOptions, timeout time.Duration
 }
 
 func addSslOptions(cluster *gocql.ClusterConfig, options *sslOptions) *gocql.ClusterConfig {
+	// Add authentication if username and password were set.
 	if options.username != "" && options.password != "" {
 		cluster.Authenticator = gocql.PasswordAuthenticator{
 			Username: options.username,
 			Password: options.password}
 	}
-	cluster.SslOpts = &gocql.SslOptions{
-		KeyPath:                options.keyPath,
-		CertPath:               options.certPath,
-		CaPath:                 options.caPath,
+
+	sslOpts := &gocql.SslOptions{
 		EnableHostVerification: options.enableServerCertVerification,
 	}
+
+	// All paths are optional depending on server config. Set them only if they are not empty.
+	if options.certPath != "" {
+		sslOpts.CertPath = options.certPath
+	}
+	if options.caPath != "" {
+		sslOpts.CaPath = options.caPath
+	}
+	if options.keyPath != "" {
+		sslOpts.KeyPath = options.keyPath
+	}
+
+	cluster.SslOpts = sslOpts
 	return cluster
 }
 
