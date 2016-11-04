@@ -103,6 +103,5 @@ elif [[ $TEST_SUITE == "integration" ]]; then
 	go get github.com/smartystreets/goconvey/convey
 	go get github.com/smartystreets/assertions
 	
-	cd $SNAP_PLUGIN_SOURCE
 	SNAP_CASSANDRA_HOST=127.0.0.1 go test -v --tags=integration ./...
 fi
