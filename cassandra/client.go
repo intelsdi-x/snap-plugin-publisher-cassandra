@@ -40,8 +40,8 @@ var (
 	createTableCQL    = "CREATE TABLE IF NOT EXISTS snap.metrics (ns  text, ver int, host text, time timestamp, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((ns, ver, host), time),) WITH CLUSTERING ORDER BY (time DESC);"
 )
 
-func NewCassaClient(server string) *cassaClient {
-	return &cassaClient{session: getInstance(server)}
+func NewCassaClient(server string, sslCassOptions *sslOptions, timeout time.Duration) *cassaClient {
+	return &cassaClient{session: getInstance(server, sslCassOptions, timeout)}
 }
 
 // cassaClient contains a long running Cassandra CQL session
@@ -49,14 +49,24 @@ type cassaClient struct {
 	session *gocql.Session
 }
 
+// sslOptions contains configuration for encrypted communication between the app and the server
+type sslOptions struct {
+	username                     string
+	password                     string
+	keyPath                      string
+	certPath                     string
+	caPath                       string
+	enableServerCertVerification bool
+}
+
 var instance *gocql.Session
 var once sync.Once
 
-// getInstance returns the singleton of *gocql.Session.
-// the sessio is not closed if the publisher is running.
-func getInstance(server string) *gocql.Session {
+// getInstance returns the singleton of *gocql.Session. It is configured with ssl options if any are given.
+// the session is not closed if the publisher is running.
+func getInstance(server string, sslCassOptions *sslOptions, timeout time.Duration) *gocql.Session {
 	once.Do(func() {
-		instance = getSession(server)
+		instance = getSession(server, sslCassOptions, timeout)
 	})
 	return instance
 }
@@ -176,11 +186,53 @@ func convert(i interface{}) (interface{}, error) {
 	return num, err
 }
 
-func getSession(server string) *gocql.Session {
+func createCluster(server string) *gocql.ClusterConfig {
 	cluster := gocql.NewCluster(server)
 	cluster.Consistency = gocql.One
 	cluster.ProtoVersion = 4
+	return cluster
+}
 
+func getSession(server string, sslCassOptions *sslOptions, timeout time.Duration) *gocql.Session {
+	cluster := createCluster(server)
+	cluster.Timeout = timeout
+
+	if sslCassOptions != nil {
+		cluster = addSslOptions(cluster, sslCassOptions)
+	}
+
+	session := initializeSession(cluster)
+	return session
+}
+
+func addSslOptions(cluster *gocql.ClusterConfig, options *sslOptions) *gocql.ClusterConfig {
+	// Add authentication if username and password were set.
+	if options.username != "" && options.password != "" {
+		cluster.Authenticator = gocql.PasswordAuthenticator{
+			Username: options.username,
+			Password: options.password}
+	}
+
+	sslOpts := &gocql.SslOptions{
+		EnableHostVerification: options.enableServerCertVerification,
+	}
+
+	// All paths are optional depending on server config. Set them only if they are not empty.
+	if options.certPath != "" {
+		sslOpts.CertPath = options.certPath
+	}
+	if options.caPath != "" {
+		sslOpts.CaPath = options.caPath
+	}
+	if options.keyPath != "" {
+		sslOpts.KeyPath = options.keyPath
+	}
+
+	cluster.SslOpts = sslOpts
+	return cluster
+}
+
+func initializeSession(cluster *gocql.ClusterConfig) *gocql.Session {
 	session, err := cluster.CreateSession()
 	if err != nil {
 		log.Fatal(err.Error())

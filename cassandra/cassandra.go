@@ -22,11 +22,12 @@ package cassandra
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/control/plugin/cpolicy"
 	"github.com/intelsdi-x/snap/core/ctypes"
@@ -34,12 +35,18 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 2
+	version    = 3
 	pluginType = plugin.PublisherPluginType
 
-	serverAddr    = "server"
-	serverErr     = "Server not found"
-	invalidServer = "Invalid server"
+	serverAddrRuleKey          = "server"
+	sslOptionsRuleKey          = "ssl"
+	usernameRuleKey            = "username"
+	passwordRuleKey            = "password"
+	keyPathRuleKey             = "keyPath"
+	certPathRuleKey            = "certPath"
+	caPathRuleKey              = "caPath"
+	enableServerCertVerRuleKey = "serverCertVerification"
+	timeoutRuleKey             = "timeout"
 )
 
 // Meta returns a plugin meta data
@@ -64,10 +71,50 @@ func (cas *CassandraPublisher) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) 
 	cp := cpolicy.New()
 	config := cpolicy.NewPolicyNode()
 
-	r1, err := cpolicy.NewStringRule(serverAddr, true)
+	serverAddrRule, err := cpolicy.NewStringRule("server", true)
 	handleErr(err)
-	r1.Description = "Cassandra server"
-	config.Add(r1)
+	serverAddrRule.Description = "Cassandra server"
+	config.Add(serverAddrRule)
+
+	useSslOptionsRule, err := cpolicy.NewBoolRule("ssl", false, false)
+	handleErr(err)
+	useSslOptionsRule.Description = "Not required, if true, use ssl options to connect to the Cassandra, default: false"
+	config.Add(useSslOptionsRule)
+
+	usernameRule, err := cpolicy.NewStringRule("username", false, "")
+	handleErr(err)
+	usernameRule.Description = "Name of a user used to authenticate to Cassandra"
+	config.Add(usernameRule)
+
+	passwordRule, err := cpolicy.NewStringRule("password", false, "")
+	handleErr(err)
+	passwordRule.Description = "Password used to authenticate to the Cassandra"
+	config.Add(passwordRule)
+
+	keyPathRule, err := cpolicy.NewStringRule("keyPath", false, "")
+	handleErr(err)
+	keyPathRule.Description = "Path to the private key for the Cassandra client"
+	config.Add(keyPathRule)
+
+	certPathRule, err := cpolicy.NewStringRule("certPath", false, "")
+	handleErr(err)
+	certPathRule.Description = "Path to the self signed certificate for the Cassandra client"
+	config.Add(certPathRule)
+
+	caPathRule, err := cpolicy.NewStringRule("caPath", false, "")
+	handleErr(err)
+	caPathRule.Description = "Path to the CA certificate for the Cassandra server"
+	config.Add(caPathRule)
+
+	enableServerCertVerRule, err := cpolicy.NewBoolRule("serverCertVerification", false, true)
+	handleErr(err)
+	enableServerCertVerRule.Description = "If true, verify a hostname and a server key, default: true"
+	config.Add(enableServerCertVerRule)
+
+	timeout, err := cpolicy.NewIntegerRule("timeout", false, 0)
+	handleErr(err)
+	timeout.Description = "Connection timeout in seconds, defaul: 0s"
+	config.Add(timeout)
 
 	cp.Add([]string{""}, config)
 	return cp, nil
@@ -94,7 +141,24 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 
 	// Only initialize client once if possible
 	if cas.client == nil {
-		cas.client = NewCassaClient(getServerAddress(config))
+		// Get all values for a new client.
+		useSslOptions, ok := getValueForKey(config, sslOptionsRuleKey).(bool)
+		checkAssertion(ok, sslOptionsRuleKey)
+
+		var sslOptions *sslOptions
+		if useSslOptions {
+			logger.Debug("using ssl options")
+			sslOptions = getSslOptions(config)
+		}
+
+		timeout, ok := getValueForKey(config, timeoutRuleKey).(int)
+		checkAssertion(ok, timeoutRuleKey)
+		serverAddr, ok := getValueForKey(config, serverAddrRuleKey).(string)
+		checkAssertion(ok, serverAddrRuleKey)
+
+		// Initialize a new client.
+		cas.client = NewCassaClient(serverAddr, sslOptions,
+			time.Duration(timeout)*time.Second)
 	}
 	return cas.client.saveMetrics(metrics)
 }
@@ -106,29 +170,65 @@ func (cas *CassandraPublisher) Close() {
 	}
 }
 
-func getServerAddress(cfg map[string]ctypes.ConfigValue) string {
+func getValueForKey(cfg map[string]ctypes.ConfigValue, key string) interface{} {
 	if cfg == nil {
-		log.Fatal(serverErr)
+		log.Error("Configuration of a plugin not found")
 	}
-	server := cfg[serverAddr]
+	configElem := cfg[key]
 
-	if server == nil || server.Type() != "string" {
-		log.Fatal(serverErr)
+	if configElem == nil {
+		log.Errorf("Valid configuration not found for a key %s", key)
 	}
-
-	result := "localhost"
-	switch server.Type() {
+	var value interface{}
+	switch configElem.Type() {
+	case "bool":
+		value = configElem.(ctypes.ConfigValueBool).Value
 	case "string":
-		result = server.(ctypes.ConfigValueStr).Value
+		value = configElem.(ctypes.ConfigValueStr).Value
+	case "integer":
+		value = configElem.(ctypes.ConfigValueInt).Value
 	default:
-		log.Fatal(invalidServer)
+		log.Errorf("Proper value type not found for a key %s", key)
 	}
-	return result
+	return value
+}
+
+func getSslOptions(cfg map[string]ctypes.ConfigValue) *sslOptions {
+	username, ok := getValueForKey(cfg, usernameRuleKey).(string)
+	checkAssertion(ok, usernameRuleKey)
+	password, ok := getValueForKey(cfg, passwordRuleKey).(string)
+	checkAssertion(ok, passwordRuleKey)
+	keyPath, ok := getValueForKey(cfg, keyPathRuleKey).(string)
+	checkAssertion(ok, keyPathRuleKey)
+	certPath, ok := getValueForKey(cfg, certPathRuleKey).(string)
+	checkAssertion(ok, certPathRuleKey)
+	caPath, ok := getValueForKey(cfg, caPathRuleKey).(string)
+	checkAssertion(ok, caPathRuleKey)
+	enableServerCertVerification, ok := getValueForKey(cfg, enableServerCertVerRuleKey).(bool)
+	checkAssertion(ok, enableServerCertVerRuleKey)
+
+	options := sslOptions{
+		username: username,
+		password: password,
+		keyPath:  keyPath,
+		certPath: certPath,
+		caPath:   caPath,
+		enableServerCertVerification: enableServerCertVerification,
+	}
+	return &options
 }
 
 func handleErr(e error) {
 	if e != nil {
 		log.Fatal(e.Error())
+	}
+}
+
+func checkAssertion(ok bool, key string) {
+	if !ok {
+		errorMsg := fmt.Sprintf("Invalid data type for a key %s", key)
+		err := errors.New(errorMsg)
+		log.Error(err)
 	}
 }
 
@@ -184,6 +284,5 @@ func getLogger(config map[string]ctypes.ConfigValue) *log.Entry {
 			}).Error("invalid config type")
 		}
 	}
-
 	return logger
 }

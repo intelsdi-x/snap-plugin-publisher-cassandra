@@ -31,8 +31,16 @@ import (
 	"github.com/intelsdi-x/snap/control/plugin"
 	"github.com/intelsdi-x/snap/core"
 	"github.com/intelsdi-x/snap/core/ctypes"
-
 	. "github.com/smartystreets/goconvey/convey"
+)
+
+const (
+	serverAddress                = "127.0.0.1"
+	sslOptionsFlag               = true
+	username                     = "username"
+	password                     = "password"
+	timeout                      = 10
+	enableServerCertVerification = false
 )
 
 func TestCassandraPublish(t *testing.T) {
@@ -47,7 +55,9 @@ func TestCassandraPublish(t *testing.T) {
 			log.Fatal("SNAP_CASSANDRA_HOST is not set")
 		}
 
-		config["server"] = ctypes.ConfigValueStr{Value: hostip}
+		config[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: hostip}
+		config[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: false}
+		config[timeoutRuleKey] = ctypes.ConfigValueInt{Value: 0}
 
 		tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname"}
 
@@ -120,5 +130,30 @@ func TestCassandraPublish(t *testing.T) {
 			err := ip.Publish(plugin.SnapGOBContentType, buf.Bytes(), config)
 			So(err, ShouldBeNil)
 		})
+
+		Convey("Publish multiple metrics while having ssl options set", func() {
+			config[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: true}
+			config[usernameRuleKey] = ctypes.ConfigValueStr{Value: username}
+			config[passwordRuleKey] = ctypes.ConfigValueStr{Value: password}
+			config[timeoutRuleKey] = ctypes.ConfigValueInt{Value: timeout}
+			config[enableServerCertVerRuleKey] = ctypes.ConfigValueBool{Value: enableServerCertVerification}
+			config[caPathRuleKey] = ctypes.ConfigValueStr{Value: ""}
+			config[certPathRuleKey] = ctypes.ConfigValueStr{Value: ""}
+			config[keyPathRuleKey] = ctypes.ConfigValueStr{Value: ""}
+
+			metrics := []plugin.MetricType{
+				*plugin.NewMetricType(core.NewNamespace("integer"), time.Now(), tags, "int", 101),
+				*plugin.NewMetricType(core.NewNamespace("float"), time.Now(), tags, "float64", 5.789),
+				*plugin.NewMetricType(core.NewNamespace("string"), time.Now(), tags, "string", "test"),
+				*plugin.NewMetricType(core.NewNamespace("boolean"), time.Now(), tags, "boolean", true),
+				*plugin.NewMetricType(core.NewNamespace("test-123"), time.Now(), tags, "int", -101),
+			}
+			buf.Reset()
+			enc := gob.NewEncoder(&buf)
+			enc.Encode(metrics)
+			err := ip.Publish(plugin.SnapGOBContentType, buf.Bytes(), config)
+			So(err, ShouldBeNil)
+		})
+
 	})
 }
