@@ -38,15 +38,24 @@ var (
 
 	createKeyspaceCQL = "CREATE KEYSPACE IF NOT EXISTS snap WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};"
 	createTableCQL    = "CREATE TABLE IF NOT EXISTS snap.metrics (ns  text, ver int, host text, time timestamp, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((ns, ver, host), time),) WITH CLUSTERING ORDER BY (time DESC);"
+	createTagTableCQL = "CREATE TABLE IF NOT EXISTS snap.tags (key  text, val text, time timestamp, ns text, ver int, host text, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((key, val), time),) WITH CLUSTERING ORDER BY (time DESC);"
 )
 
-func NewCassaClient(server string, sslCassOptions *sslOptions, timeout time.Duration) *cassaClient {
-	return &cassaClient{session: getInstance(server, sslCassOptions, timeout)}
+// NewCassaClient creates a new instance of a cassandra client.
+func NewCassaClient(co clientOptions, tagIndex string) *cassaClient {
+	return &cassaClient{session: getInstance(co), tagsIndexing: tagIndex}
 }
 
 // cassaClient contains a long running Cassandra CQL session
 type cassaClient struct {
-	session *gocql.Session
+	session      *gocql.Session
+	tagsIndexing string
+}
+
+type clientOptions struct {
+	server  string
+	timeout time.Duration
+	ssl     *sslOptions
 }
 
 // sslOptions contains configuration for encrypted communication between the app and the server
@@ -64,9 +73,9 @@ var once sync.Once
 
 // getInstance returns the singleton of *gocql.Session. It is configured with ssl options if any are given.
 // the session is not closed if the publisher is running.
-func getInstance(server string, sslCassOptions *sslOptions, timeout time.Duration) *gocql.Session {
+func getInstance(co clientOptions) *gocql.Session {
 	once.Do(func() {
-		instance = getSession(server, sslCassOptions, timeout)
+		instance = getSession(co)
 	})
 	return instance
 }
@@ -75,7 +84,15 @@ func (cc *cassaClient) saveMetrics(mts []plugin.MetricType) error {
 	errs := []string{}
 	var err error
 	for _, m := range mts {
+		// insert data into metrics table
 		err = worker(cc.session, m)
+		if err != nil {
+			errs = append(errs, err.Error())
+		}
+
+		// inserts data into tags table if tagIndex config exists
+		vtags := getValidTagIndex(m.Tags(), cc.tagsIndexing)
+		err = tagWorker(cc.session, m, vtags)
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
@@ -86,7 +103,7 @@ func (cc *cassaClient) saveMetrics(mts []plugin.MetricType) error {
 	return err
 }
 
-// works insert data into Cassandra DB only when the data is valid
+// works insert data into Cassandra DB metrics table only when the data is valid
 func worker(s *gocql.Session, m plugin.MetricType) error {
 	value, err := convert(m.Data())
 	if err != nil {
@@ -145,6 +162,81 @@ func worker(s *gocql.Session, m plugin.MetricType) error {
 	return nil
 }
 
+// tagWorker insert data into Cassandra DB tags only when the tags array is not empty.
+func tagWorker(s *gocql.Session, m plugin.MetricType, tags []string) error {
+	if len(tags) == 0 {
+		return nil
+	}
+
+	value, err := convert(m.Data())
+	if err != nil {
+		cassaLog.WithFields(log.Fields{
+			"err": err,
+		}).Error("Cassandra client invalid data type")
+		return err
+	}
+	mTags := m.Tags()
+	switch value.(type) {
+	case float64:
+		for _, k := range tags {
+			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, doubleVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
+				k,
+				mTags[k],
+				time.Now(),
+				m.Namespace().String(),
+				m.Version(),
+				m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
+				"doubleval",
+				value,
+				m.Tags()).Exec(); err != nil {
+				cassaLog.WithFields(log.Fields{
+					"err": err,
+				}).Error("Cassandra client insertion error")
+				return err
+			}
+		}
+	case string:
+		for _, k := range tags {
+			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, strVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
+				k,
+				m.Tags()[k],
+				time.Now(),
+				m.Namespace().String(),
+				m.Version(),
+				m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
+				"strval",
+				value,
+				m.Tags()).Exec(); err != nil {
+				cassaLog.WithFields(log.Fields{
+					"err": err,
+				}).Error("Cassandra client insertion error")
+				return err
+			}
+		}
+	case bool:
+		for _, k := range tags {
+			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, boolVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
+				k,
+				m.Tags()[k],
+				time.Now(),
+				m.Namespace().String(),
+				m.Version(),
+				m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
+				"boolval",
+				value,
+				m.Tags()).Exec(); err != nil {
+				cassaLog.WithFields(log.Fields{
+					"err": err,
+				}).Error("Cassandra client insertion error")
+				return err
+			}
+		}
+	default:
+		return fmt.Errorf(ErrInvalidDataType.Error(), value)
+	}
+	return nil
+}
+
 // converts the value into float64 and filters out the
 // invalid data
 func convert(i interface{}) (interface{}, error) {
@@ -193,12 +285,12 @@ func createCluster(server string) *gocql.ClusterConfig {
 	return cluster
 }
 
-func getSession(server string, sslCassOptions *sslOptions, timeout time.Duration) *gocql.Session {
-	cluster := createCluster(server)
-	cluster.Timeout = timeout
+func getSession(co clientOptions) *gocql.Session {
+	cluster := createCluster(co.server)
+	// cluster.Timeout = co.timeout
 
-	if sslCassOptions != nil {
-		cluster = addSslOptions(cluster, sslCassOptions)
+	if co.ssl != nil {
+		cluster = addSslOptions(cluster, co.ssl)
 	}
 
 	session := initializeSession(cluster)
@@ -245,5 +337,23 @@ func initializeSession(cluster *gocql.ClusterConfig) *gocql.Session {
 	if err := session.Query(createTableCQL).Exec(); err != nil {
 		log.Fatal(err.Error())
 	}
+
+	if err := session.Query(createTagTableCQL).Exec(); err != nil {
+		log.Fatal(err.Error())
+	}
 	return session
+}
+
+// getValidTagIndex checks if there are tags to be indexed for a giving metric.
+func getValidTagIndex(mtag map[string]string, tagIndex string) []string {
+	itags := []string{}
+
+	indexTags := strings.Split(tagIndex, ",")
+	for _, t := range indexTags {
+		tt := strings.TrimSpace(t)
+		if _, ok := mtag[tt]; ok {
+			itags = append(itags, tt)
+		}
+	}
+	return itags
 }

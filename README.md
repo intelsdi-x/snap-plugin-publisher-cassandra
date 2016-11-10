@@ -75,7 +75,23 @@ CREATE TABLE snap.metrics (
 	tags map<text,text>, 
 	PRIMARY KEY ((ns, ver, host), time)
 ) WITH CLUSTERING ORDER BY (time DESC);
+
+CREATE TABLE IF NOT EXISTS snap.tags (
+key text,  
+val text,  
+time timestamp, 
+ns  text, 
+ver int,   
+host text,  
+valType text,   
+doubleVal double,   
+strVal text,   
+boolVal boolean,   
+tags map<text,text>,   
+PRIMARY KEY ((key, val), time, ns, ver, host),
+) WITH CLUSTERING ORDER BY (time DESC);
 ```
+Note that metric data always stores in table _`metrics`_. When the _tagIndex_ is giving in a publisher config, the specified tags will be created in _`tags`_ table. Please refer to [here](./docs/TABLES.md) for details.
 
 ### Examples
 Let's get started. For example:

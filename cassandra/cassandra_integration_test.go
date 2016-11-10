@@ -39,7 +39,7 @@ const (
 	sslOptionsFlag               = true
 	username                     = "username"
 	password                     = "password"
-	timeout                      = 10
+	timeout                      = 1
 	enableServerCertVerification = false
 )
 
@@ -58,12 +58,12 @@ func TestCassandraPublish(t *testing.T) {
 		config[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: hostip}
 		config[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: false}
 		config[timeoutRuleKey] = ctypes.ConfigValueInt{Value: 0}
-
-		tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname"}
+		config[tagIndexRuleKey] = ctypes.ConfigValueStr{Value: "experimentId,mode,year"}
 
 		Convey("Publish integer metric", func() {
+			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "experimentId": "101"}
 			metrics := []plugin.MetricType{
-				*plugin.NewMetricType(core.NewNamespace("foo"), time.Now(), tags, "int", 99),
+				*plugin.NewMetricType(core.NewNamespace("baz"), time.Now(), tags, "int", 103),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)
@@ -73,8 +73,9 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish float metric", func() {
+			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "experimentId": "102"}
 			metrics := []plugin.MetricType{
-				*plugin.NewMetricType(core.NewNamespace("bar"), time.Now(), tags, "float64", 3.141),
+				*plugin.NewMetricType(core.NewNamespace("barrr"), time.Now(), tags, "float64", 3.141),
 			}
 			buf.Reset()
 			enc := gob.NewEncoder(&buf)
@@ -84,6 +85,7 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish string metric", func() {
+			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "experimentId": "103", "mode": "abc"}
 			metrics := []plugin.MetricType{
 				*plugin.NewMetricType(core.NewNamespace("qux"), time.Now(), tags, "string", "bar"),
 			}
@@ -95,6 +97,7 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish boolean metric", func() {
+			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "experimentId": "104", "brand": "xyz"}
 			metrics := []plugin.MetricType{
 				*plugin.NewMetricType(core.NewNamespace("baz"), time.Now(), tags, "bool", true),
 			}
@@ -106,6 +109,7 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish map metric", func() {
+			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "experimentId": "105", "year": "2016"}
 			metrics := []plugin.MetricType{
 				*plugin.NewMetricType(core.NewNamespace("invalid/data/type"), time.Now(), tags, "map", map[string]string{"foo": "bar"}),
 			}
@@ -117,6 +121,7 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish multiple metrics", func() {
+			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "experimentId": "103", "year": "2016"}
 			metrics := []plugin.MetricType{
 				*plugin.NewMetricType(core.NewNamespace("integer"), time.Now(), tags, "int", 101),
 				*plugin.NewMetricType(core.NewNamespace("float"), time.Now(), tags, "float64", 5.789),
@@ -132,6 +137,7 @@ func TestCassandraPublish(t *testing.T) {
 		})
 
 		Convey("Publish multiple metrics while having ssl options set", func() {
+			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "ssl": "108"}
 			config[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: true}
 			config[usernameRuleKey] = ctypes.ConfigValueStr{Value: username}
 			config[passwordRuleKey] = ctypes.ConfigValueStr{Value: password}

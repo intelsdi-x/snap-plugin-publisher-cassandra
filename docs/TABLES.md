@@ -42,10 +42,10 @@ WHERE NS   = '/foo'
 ```
 
 ### Table tags
-Table _`tags`_ stores Snap metric data with the metric tag key and value as the partition key and columns time, namespace, version, host as the cluster keys. The data is ordered by the latest first. 
+Table _`tags`_ stores Snap metric data with the metric tag key and value as the partition key and columns time as the cluster key. The data is ordered by the latest first. 
 
 #### Table tags design
-Table _`tags`_ is designed for querying metric data by a metric tag key, value and other optional cluster keys.
+Table _`tags`_ is designed for querying metric data by a metric tag key, value and time.
  ```
 CREATE TABLE IF NOT EXISTS snap.tags (
 key text,  
@@ -59,28 +59,27 @@ doubleVal double,
 strVal text,   
 boolVal boolean,   
 tags map<text,text>,   
-PRIMARY KEY ((key, val), time, ns, ver, host),
+PRIMARY KEY ((key, val), time),
 ) WITH CLUSTERING ORDER BY (time DESC);
  ```
 
 #### Query table tags
-For querying table _`tags`_, its partition key (key, val) is mandatory. Cluster keys are optional.
+For querying table _`tags`_, its partition key (key, val) is mandatory. Cluster key is optional.
 
 **Sample Queries**
 ```
 SELECT * FROM TAGS 
-WHERE KEY = 'experiment' 
+WHERE KEY = 'experimentId' 
   AND VAL = 'x';
   
 SELECT * from TAGS 
-WHERE KEY = 'experiment' 
+WHERE KEY = 'experimentId' 
   AND VAL = 'x' 
-  AND TIME >'2016-08-02 22:50:04+0000'
-  AND NS = '/foo';
+  AND TIME >'2016-08-02 22:50:04+0000';
 ``` 
 ### Snap Task Manifest NoSQL specific
-The table _`snap.tags`_ is created if the parameter _`tag_indexing`_ is specified in the Snap publisher task manifest.
-* `tag_indexing`: A comma separated tag key list. e.g. experimentID,scope.
+The table _`snap.tags`_ is created if the parameter _`tagIndex`_ is specified in the Snap publisher task manifest.
+* `tagIndex`: A comma separated tag key list. e.g. experimentId,scope.
 
 **Sample Task Manifest**
 ```
@@ -107,7 +106,7 @@ The table _`snap.tags`_ is created if the parameter _`tag_indexing`_ is specifie
                     "plugin_name": "cassandra",                            
                     "config": {
                         "server": "SNAP_CASSANDRA_HOST"
-                        "tag_indexing": experimentID, scope
+                        "tagIndex": experimentId,scope
                     }
                 }
             ]                                            
@@ -115,7 +114,7 @@ The table _`snap.tags`_ is created if the parameter _`tag_indexing`_ is specifie
     }
 }
 ```
-Note that table _`snap.tags`_ stores metric data tagged with keys defined in `tag_indexing` config field.
+Note that table _`snap.tags`_ stores metric data tagged with keys defined in `tagIndex` config field.
 
 If the current design does not fit your use cases, please add it as an [issue](https://github.com/intelsdi-x/snap-plugin-publisher-cassandra/issues/new) and/or 
 submit a [pull request](https://github.com/intelsdi-x/snap-plugin-publisher-cassandra/pulls).
