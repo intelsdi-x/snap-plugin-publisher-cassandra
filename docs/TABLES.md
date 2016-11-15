@@ -10,16 +10,16 @@ Table _`metrics`_ stores Snap metric data with the metric namespace, version, ho
 Table _`metrics`_ is designed for querying metric data by a metric namespace, version and host.
 ```
 CREATE TABLE IF NOT EXISTS snap.metrics (
-ns  text, 
-ver int, 
-host text, 
-time timestamp, 
-valType text, 
-doubleVal double, 
-strVal text, 
-boolVal boolean, 
-tags map<text,text>, 
-PRIMARY KEY ((ns, ver, host), time),
+    ns  text, 
+    ver int, 
+    host text, 
+    time timestamp, 
+    valType text, 
+    doubleVal double, 
+    strVal text, 
+    boolVal boolean, 
+    tags map<text,text>, 
+    PRIMARY KEY ((ns, ver, host), time),
 ) WITH CLUSTERING ORDER BY (time DESC);
 ```
 
@@ -48,18 +48,18 @@ Table _`tags`_ stores Snap metric data with the metric tag key and value as the 
 Table _`tags`_ is designed for querying metric data by a metric tag key, value and time.
  ```
 CREATE TABLE IF NOT EXISTS snap.tags (
-key text,  
-val text,  
-time timestamp, 
-ns  text, 
-ver int,   
-host text,  
-valType text,   
-doubleVal double,   
-strVal text,   
-boolVal boolean,   
-tags map<text,text>,   
-PRIMARY KEY ((key, val), time),
+    key text,  
+    val text,  
+    time timestamp, 
+    ns  text, 
+    ver int,   
+    host text,  
+    valType text,   
+    doubleVal double,   
+    strVal text,   
+    boolVal boolean,   
+    tags map<text,text>,   
+    PRIMARY KEY ((key, val), time),
 ) WITH CLUSTERING ORDER BY (time DESC);
  ```
 
@@ -78,7 +78,7 @@ WHERE KEY = 'experimentId'
   AND TIME >'2016-08-02 22:50:04+0000';
 ``` 
 ### Snap Task Manifest NoSQL specific
-The table _`snap.tags`_ is created if the parameter _`tagIndex`_ is specified in the Snap publisher task manifest.
+The table _`snap.tags`_ is created if the parameter _`tagIndex`_ is specified in the Snap publisher task manifest. Specifying this tag only when your use cases need to query on tags.
 * `tagIndex`: A comma separated tag key list. e.g. experimentId,scope.
 
 **Sample Task Manifest**
@@ -106,7 +106,7 @@ The table _`snap.tags`_ is created if the parameter _`tagIndex`_ is specified in
                     "plugin_name": "cassandra",                            
                     "config": {
                         "server": "SNAP_CASSANDRA_HOST"
-                        "tagIndex": experimentId,scope
+                        "tagIndex": "experimentId,scope"
                     }
                 }
             ]                                            

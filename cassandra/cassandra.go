@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -35,7 +34,7 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 3
+	version    = 4
 	pluginType = plugin.PublisherPluginType
 
 	serverAddrRuleKey          = "server"
@@ -46,7 +45,6 @@ const (
 	certPathRuleKey            = "certPath"
 	caPathRuleKey              = "caPath"
 	enableServerCertVerRuleKey = "serverCertVerification"
-	timeoutRuleKey             = "timeout"
 	tagIndexRuleKey            = "tagIndex"
 )
 
@@ -112,11 +110,6 @@ func (cas *CassandraPublisher) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) 
 	enableServerCertVerRule.Description = "If true, verify a hostname and a server key, default: true"
 	config.Add(enableServerCertVerRule)
 
-	timeout, err := cpolicy.NewIntegerRule(timeoutRuleKey, false, 0)
-	handleErr(err)
-	timeout.Description = "Connection timeout in seconds, defaul: 0s"
-	config.Add(timeout)
-
 	tagIndexRule, err := cpolicy.NewStringRule(tagIndexRuleKey, false, "")
 	handleErr(err)
 	tagIndexRule.Description = "Name of tags to be indexed separated by a comma"
@@ -157,15 +150,12 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 			sslOptions = getSslOptions(config)
 		}
 
-		timeout, ok := getValueForKey(config, timeoutRuleKey).(int)
-		checkAssertion(ok, timeoutRuleKey)
 		serverAddr, ok := getValueForKey(config, serverAddrRuleKey).(string)
 		checkAssertion(ok, serverAddrRuleKey)
 
 		co := clientOptions{
-			server:  serverAddr,
-			timeout: time.Duration(timeout),
-			ssl:     sslOptions,
+			server: serverAddr,
+			ssl:    sslOptions,
 		}
 
 		// Initialize a new client.

@@ -43,19 +43,18 @@ var (
 
 // NewCassaClient creates a new instance of a cassandra client.
 func NewCassaClient(co clientOptions, tagIndex string) *cassaClient {
-	return &cassaClient{session: getInstance(co), tagsIndexing: tagIndex}
+	return &cassaClient{session: getInstance(co), tagsIndex: tagIndex}
 }
 
 // cassaClient contains a long running Cassandra CQL session
 type cassaClient struct {
-	session      *gocql.Session
-	tagsIndexing string
+	session   *gocql.Session
+	tagsIndex string
 }
 
 type clientOptions struct {
-	server  string
-	timeout time.Duration
-	ssl     *sslOptions
+	server string
+	ssl    *sslOptions
 }
 
 // sslOptions contains configuration for encrypted communication between the app and the server
@@ -91,7 +90,7 @@ func (cc *cassaClient) saveMetrics(mts []plugin.MetricType) error {
 		}
 
 		// inserts data into tags table if tagIndex config exists
-		vtags := getValidTagIndex(m.Tags(), cc.tagsIndexing)
+		vtags := getValidTagIndex(m.Tags(), cc.tagsIndex)
 		err = tagWorker(cc.session, m, vtags)
 		if err != nil {
 			errs = append(errs, err.Error())
@@ -175,13 +174,13 @@ func tagWorker(s *gocql.Session, m plugin.MetricType, tags []string) error {
 		}).Error("Cassandra client invalid data type")
 		return err
 	}
-	mTags := m.Tags()
+
 	switch value.(type) {
 	case float64:
-		for _, k := range tags {
+		for _, v := range tags {
 			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, doubleVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
-				k,
-				mTags[k],
+				v,
+				m.Tags()[v],
 				time.Now(),
 				m.Namespace().String(),
 				m.Version(),
@@ -196,10 +195,10 @@ func tagWorker(s *gocql.Session, m plugin.MetricType, tags []string) error {
 			}
 		}
 	case string:
-		for _, k := range tags {
+		for _, v := range tags {
 			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, strVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
-				k,
-				m.Tags()[k],
+				v,
+				m.Tags()[v],
 				time.Now(),
 				m.Namespace().String(),
 				m.Version(),
@@ -214,10 +213,10 @@ func tagWorker(s *gocql.Session, m plugin.MetricType, tags []string) error {
 			}
 		}
 	case bool:
-		for _, k := range tags {
+		for _, v := range tags {
 			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, boolVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
-				k,
-				m.Tags()[k],
+				v,
+				m.Tags()[v],
 				time.Now(),
 				m.Namespace().String(),
 				m.Version(),
@@ -287,7 +286,6 @@ func createCluster(server string) *gocql.ClusterConfig {
 
 func getSession(co clientOptions) *gocql.Session {
 	cluster := createCluster(co.server)
-	// cluster.Timeout = co.timeout
 
 	if co.ssl != nil {
 		cluster = addSslOptions(cluster, co.ssl)
