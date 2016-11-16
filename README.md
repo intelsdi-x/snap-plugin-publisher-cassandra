@@ -1,4 +1,4 @@
-# snap Cassandra publisher plugin 
+# Snap Cassandra publisher plugin 
 This plugin publishes snap metric data into Cassandra database.
 
 It's used in the [snap framework](http://github.com/intelsdi-x/snap).
@@ -62,6 +62,7 @@ All metrics exposed by snap collector plugins. Currently, it only supports the n
 data types. Number data types are integers and floats. Plugin stores numbers inside Cassandra as doubles.
 
 ### Plugin Database Schema
+Metric data always goes in the table _`metrics`_ of the keyspace _`snap`_. The primary key for table metrics is the combination of a metric namespace, version, and the running host.
 ```
 CREATE TABLE snap.metrics (
 	ns  text, 
@@ -74,6 +75,24 @@ CREATE TABLE snap.metrics (
     strVal text,
 	tags map<text,text>, 
 	PRIMARY KEY ((ns, ver, host), time)
+) WITH CLUSTERING ORDER BY (time DESC);
+```
+
+Metric data goes into the table _`tag`_ only when the _`tagIndex`_ is giving in a publisher config. _`tagIndex`_ is a comma separatored tag list. Please refer to [here](./docs/TABLES.md) for details.
+```
+CREATE TABLE snap.tags (
+    key text,  
+    val text,  
+    time timestamp, 
+    ns  text, 
+    ver int,   
+    host text,  
+    valType text,   
+    doubleVal double,   
+    strVal text,   
+    boolVal boolean,   
+    tags map<text,text>,   
+    PRIMARY KEY ((key, val), time),
 ) WITH CLUSTERING ORDER BY (time DESC);
 ```
 
@@ -152,9 +171,11 @@ Name: Task-f5dda751-c4db-4361-8a63-ced153aa6550
 State: Running
 
 ```
-The example task manifest file, cassandra-task.json:
+The example task manifest file, cassandra-task.json. Note that _`server`_ in the publisher config is mandatory but _`tagIndex`_ is optional.
+Specifying _`tagIndex`_ only when you like to do _read queries_ for tags.
 ```json
 {
+    "_comment": "tagIndex in the publish config is optional",
     "version": 1,
     "schedule": {
         "type": "simple",
@@ -176,7 +197,8 @@ The example task manifest file, cassandra-task.json:
                 {
                     "plugin_name": "cassandra",                            
                     "config": {
-                        "server": "SNAP_CASSANDRA_HOST"
+                        "server": "SNAP_CASSANDRA_HOST",
+                        "tagIndex": "experimentId,scope"
                     }
                 }
             ]                                            

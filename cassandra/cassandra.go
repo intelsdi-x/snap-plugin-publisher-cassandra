@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -35,7 +34,7 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 3
+	version    = 4
 	pluginType = plugin.PublisherPluginType
 
 	serverAddrRuleKey          = "server"
@@ -46,7 +45,7 @@ const (
 	certPathRuleKey            = "certPath"
 	caPathRuleKey              = "caPath"
 	enableServerCertVerRuleKey = "serverCertVerification"
-	timeoutRuleKey             = "timeout"
+	tagIndexRuleKey            = "tagIndex"
 )
 
 // Meta returns a plugin meta data
@@ -71,50 +70,50 @@ func (cas *CassandraPublisher) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) 
 	cp := cpolicy.New()
 	config := cpolicy.NewPolicyNode()
 
-	serverAddrRule, err := cpolicy.NewStringRule("server", true)
+	serverAddrRule, err := cpolicy.NewStringRule(serverAddrRuleKey, true)
 	handleErr(err)
 	serverAddrRule.Description = "Cassandra server"
 	config.Add(serverAddrRule)
 
-	useSslOptionsRule, err := cpolicy.NewBoolRule("ssl", false, false)
+	useSslOptionsRule, err := cpolicy.NewBoolRule(sslOptionsRuleKey, false, false)
 	handleErr(err)
 	useSslOptionsRule.Description = "Not required, if true, use ssl options to connect to the Cassandra, default: false"
 	config.Add(useSslOptionsRule)
 
-	usernameRule, err := cpolicy.NewStringRule("username", false, "")
+	usernameRule, err := cpolicy.NewStringRule(usernameRuleKey, false, "")
 	handleErr(err)
 	usernameRule.Description = "Name of a user used to authenticate to Cassandra"
 	config.Add(usernameRule)
 
-	passwordRule, err := cpolicy.NewStringRule("password", false, "")
+	passwordRule, err := cpolicy.NewStringRule(passwordRuleKey, false, "")
 	handleErr(err)
 	passwordRule.Description = "Password used to authenticate to the Cassandra"
 	config.Add(passwordRule)
 
-	keyPathRule, err := cpolicy.NewStringRule("keyPath", false, "")
+	keyPathRule, err := cpolicy.NewStringRule(keyPathRuleKey, false, "")
 	handleErr(err)
 	keyPathRule.Description = "Path to the private key for the Cassandra client"
 	config.Add(keyPathRule)
 
-	certPathRule, err := cpolicy.NewStringRule("certPath", false, "")
+	certPathRule, err := cpolicy.NewStringRule(certPathRuleKey, false, "")
 	handleErr(err)
 	certPathRule.Description = "Path to the self signed certificate for the Cassandra client"
 	config.Add(certPathRule)
 
-	caPathRule, err := cpolicy.NewStringRule("caPath", false, "")
+	caPathRule, err := cpolicy.NewStringRule(caPathRuleKey, false, "")
 	handleErr(err)
 	caPathRule.Description = "Path to the CA certificate for the Cassandra server"
 	config.Add(caPathRule)
 
-	enableServerCertVerRule, err := cpolicy.NewBoolRule("serverCertVerification", false, true)
+	enableServerCertVerRule, err := cpolicy.NewBoolRule(enableServerCertVerRuleKey, false, true)
 	handleErr(err)
 	enableServerCertVerRule.Description = "If true, verify a hostname and a server key, default: true"
 	config.Add(enableServerCertVerRule)
 
-	timeout, err := cpolicy.NewIntegerRule("timeout", false, 0)
+	tagIndexRule, err := cpolicy.NewStringRule(tagIndexRuleKey, false, "")
 	handleErr(err)
-	timeout.Description = "Connection timeout in seconds, defaul: 0s"
-	config.Add(timeout)
+	tagIndexRule.Description = "Name of tags to be indexed separated by a comma"
+	config.Add(tagIndexRule)
 
 	cp.Add([]string{""}, config)
 	return cp, nil
@@ -151,14 +150,18 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 			sslOptions = getSslOptions(config)
 		}
 
-		timeout, ok := getValueForKey(config, timeoutRuleKey).(int)
-		checkAssertion(ok, timeoutRuleKey)
 		serverAddr, ok := getValueForKey(config, serverAddrRuleKey).(string)
 		checkAssertion(ok, serverAddrRuleKey)
 
+		co := clientOptions{
+			server: serverAddr,
+			ssl:    sslOptions,
+		}
+
 		// Initialize a new client.
-		cas.client = NewCassaClient(serverAddr, sslOptions,
-			time.Duration(timeout)*time.Second)
+		tagIndex, ok := getValueForKey(config, tagIndexRuleKey).(string)
+		checkAssertion(ok, tagIndex)
+		cas.client = NewCassaClient(co, tagIndex)
 	}
 	return cas.client.saveMetrics(metrics)
 }
