@@ -1,0 +1,58 @@
+hash: 336023be1e3b912d3f202165b07319d4190e4c59edd016e65355cbc412fe7f22
+updated: 2016-11-16T19:32:00.959436057-08:00
+imports:
+- name: github.com/gocql/gocql
+  version: 03ae28ccfc4fa086afea7fcec681bf7ff60f0346
+  subpackages:
+  - internal/lru
+  - internal/murmur
+  - internal/streams
+- name: github.com/golang/snappy
+  version: d7b1e156f50d3c4664f683603af70e3e47fa0aa2
+- name: github.com/gopherjs/gopherjs
+  version: 4b53e1bddba0e2f734514aeb6c02db652f4c6fe8
+  subpackages:
+  - js
+- name: github.com/hailocab/go-hostpool
+  version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
+- name: github.com/intelsdi-x/snap
+  version: 8f3ac356e8d56a59b65a728fc94d2241030db535
+  subpackages:
+  - control/plugin
+  - control/plugin/cpolicy
+  - control/plugin/encoding
+  - control/plugin/encrypter
+  - core
+  - core/cdata
+  - core/ctypes
+  - core/serror
+  - pkg/ctree
+  - pkg/schedule
+  - pkg/stringutils
+  - scheduler/wmap
+- name: github.com/jtolds/gls
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+- name: github.com/robfig/cron
+  version: 32d9c273155a0506d27cf73dd1246e86a470997e
+- name: github.com/Sirupsen/logrus
+  version: be52937128b38f1d99787bb476c789e2af1147f1
+- name: github.com/smartystreets/assertions
+  version: 443d812296a84445c202c085f19e18fc238f8250
+  subpackages:
+  - internal/go-render/render
+  - internal/oglematchers
+- name: github.com/smartystreets/goconvey
+  version: 995f5b2e021c69b8b028ba6d0b05c1dd500783db
+  subpackages:
+  - convey
+  - convey/gotest
+  - convey/reporting
+- name: golang.org/x/sys
+  version: c8bc69bc2db9c57ccf979550bc69655df5039a8a
+  subpackages:
+  - unix
+- name: gopkg.in/inf.v0
+  version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+- name: gopkg.in/yaml.v2
+  version: c1cd2254a6dd314c9d73c338c12688c9325d85c6
+testImports: []
