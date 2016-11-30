@@ -17,7 +17,7 @@ import:
 - package: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - package: github.com/intelsdi-x/snap
-  version: 8f3ac356e8d56a59b65a728fc94d2241030db535
+  version: v0.14.0-beta
   subpackages:
   - control/plugin
   - control/plugin/cpolicy
