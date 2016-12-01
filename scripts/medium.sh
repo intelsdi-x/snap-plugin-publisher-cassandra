@@ -21,7 +21,7 @@ while ! curl -sG "http://${SNAP_CASSANDRA_HOST}:8082/serverbydomain?querynames=o
   echo -n "."
 done
 
-sleep 10
+sleep 15
 
 UNIT_TEST="go_test"
 test_unit
