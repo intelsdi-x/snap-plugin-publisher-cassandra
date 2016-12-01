@@ -44,7 +44,6 @@ deploy:
   acl: public_read
   on:
     repo: intelsdi-x/snap-plugin-publisher-cassandra
-    branch: master
     condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.3"
 - provider: s3
   access_key_id: AKIAINMB43VSSPFZISAA
