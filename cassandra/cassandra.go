@@ -34,7 +34,7 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 4
+	version    = 5
 	pluginType = plugin.PublisherPluginType
 
 	serverAddrRuleKey          = "server"
