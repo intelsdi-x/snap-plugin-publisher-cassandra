@@ -118,7 +118,7 @@ func worker(s *gocql.Session, m plugin.MetricType) error {
 			m.Namespace().String(),
 			m.Version(),
 			m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-			time.Now(),
+			m.Timestamp(),
 			"doubleval",
 			value,
 			m.Tags()).Exec(); err != nil {
@@ -132,7 +132,7 @@ func worker(s *gocql.Session, m plugin.MetricType) error {
 			m.Namespace().String(),
 			m.Version(),
 			m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-			time.Now(),
+			m.Timestamp(),
 			"strval",
 			value,
 			m.Tags()).Exec(); err != nil {
@@ -146,7 +146,7 @@ func worker(s *gocql.Session, m plugin.MetricType) error {
 			m.Namespace().String(),
 			m.Version(),
 			m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-			time.Now(),
+			m.Timestamp(),
 			"boolval",
 			value,
 			m.Tags()).Exec(); err != nil {

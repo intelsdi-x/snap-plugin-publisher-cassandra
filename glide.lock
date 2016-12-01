@@ -1,5 +1,5 @@
-hash: 143611a9206037f292104a5f712c03e49b8033d7e7dc584c597bf48e6bcb932d
-updated: 2016-11-30T13:54:36.770275884-08:00
+hash: 73b8b161b05f3b63f8131b5ee501c9f0cdfca8ec82458cd6373c9c5340ee31cf
+updated: 2016-12-01T10:24:49.31666063-08:00
 imports:
 - name: github.com/gocql/gocql
   version: 03ae28ccfc4fa086afea7fcec681bf7ff60f0346
@@ -16,7 +16,7 @@ imports:
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/intelsdi-x/snap
-  version: 506318ebb84a8fefc5ef966edc4318c9cf5b2002
+  version: 8905198aaab5bfb6d50a747477ca401e3a7a33ab
   subpackages:
   - control/plugin
   - control/plugin/cpolicy
