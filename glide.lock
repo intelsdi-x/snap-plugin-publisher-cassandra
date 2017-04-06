@@ -1,8 +1,8 @@
-hash: 336023be1e3b912d3f202165b07319d4190e4c59edd016e65355cbc412fe7f22
-updated: 2016-11-16T19:32:00.959436057-08:00
+hash: e3649f79d3a330272250bab0c35dec63d4fde8f9d47063cd00247177d94fc56a
+updated: 2017-04-06T12:00:49.756312993+02:00
 imports:
 - name: github.com/gocql/gocql
-  version: 03ae28ccfc4fa086afea7fcec681bf7ff60f0346
+  version: f8b6dcaf4f8a770652c11e7e94b517fcb706fce8
   subpackages:
   - internal/lru
   - internal/murmur
@@ -47,6 +47,12 @@ imports:
   - convey
   - convey/gotest
   - convey/reporting
+- name: golang.org/x/net
+  version: 04557861f124410b768b1ba5bb3a91b705afbfc6
+  subpackages:
+  - context
+  - http2
+  - trace
 - name: golang.org/x/sys
   version: c8bc69bc2db9c57ccf979550bc69655df5039a8a
   subpackages:
