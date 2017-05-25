@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/intelsdi-x/snap/control/plugin"
@@ -34,18 +35,26 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 5
+	version    = 6
 	pluginType = plugin.PublisherPluginType
 
+	caPathRuleKey              = "caPath"
+	certPathRuleKey            = "certPath"
+	connectionTimeoutRuleKey   = "connectionTimeout"
+	createKeyspaceRuleKey      = "createKeyspace"
+	enableServerCertVerRuleKey = "serverCertVerification"
+	ignorePeerAddrRuleKey      = "ignorePeerAddr"
+	initialHostLookupRuleKey   = "initialHostLookup"
+	keyPathRuleKey             = "keyPath"
+	keyspaceNameRuleKey        = "keyspaceName"
+	passwordRuleKey            = "password"
+	portRuleKey                = "port"
 	serverAddrRuleKey          = "server"
 	sslOptionsRuleKey          = "ssl"
-	usernameRuleKey            = "username"
-	passwordRuleKey            = "password"
-	keyPathRuleKey             = "keyPath"
-	certPathRuleKey            = "certPath"
-	caPathRuleKey              = "caPath"
-	enableServerCertVerRuleKey = "serverCertVerification"
+	tableNameRuleKey           = "tableName"
 	tagIndexRuleKey            = "tagIndex"
+	timeoutRuleKey             = "timeout"
+	usernameRuleKey            = "username"
 )
 
 // Meta returns a plugin meta data
@@ -70,6 +79,61 @@ func (cas *CassandraPublisher) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) 
 	cp := cpolicy.New()
 	config := cpolicy.NewPolicyNode()
 
+	caPathRule, err := cpolicy.NewStringRule(caPathRuleKey, false, "")
+	handleErr(err)
+	caPathRule.Description = "Path to the CA certificate for the Cassandra server"
+	config.Add(caPathRule)
+
+	certPathRule, err := cpolicy.NewStringRule(certPathRuleKey, false, "")
+	handleErr(err)
+	certPathRule.Description = "Path to the self signed certificate for the Cassandra client"
+	config.Add(certPathRule)
+
+	connectionTimeoutRule, err := cpolicy.NewIntegerRule(connectionTimeoutRuleKey, false, 2)
+	handleErr(err)
+	connectionTimeoutRule.Description = "Initial connection timeout in seconds, default: 2"
+	config.Add(connectionTimeoutRule)
+
+	createKeyspaceRule, err := cpolicy.NewBoolRule(createKeyspaceRuleKey, false, true)
+	handleErr(err)
+	createKeyspaceRule.Description = "Create keyspace if it's not exist, default: true"
+	config.Add(createKeyspaceRule)
+
+	enableServerCertVerRule, err := cpolicy.NewBoolRule(enableServerCertVerRuleKey, false, true)
+	handleErr(err)
+	enableServerCertVerRule.Description = "If true, verify a hostname and a server key, default: true"
+	config.Add(enableServerCertVerRule)
+
+	ignorePeerAddrRule, err := cpolicy.NewBoolRule(ignorePeerAddrRuleKey, false, false)
+	handleErr(err)
+	ignorePeerAddrRule.Description = "Turn off cluster hosts tracking, default: false"
+	config.Add(ignorePeerAddrRule)
+
+	initialHostLookupRule, err := cpolicy.NewBoolRule(initialHostLookupRuleKey, false, true)
+	handleErr(err)
+	initialHostLookupRule.Description = "Lookup for cluster hosts information, default: true"
+	config.Add(initialHostLookupRule)
+
+	keyPathRule, err := cpolicy.NewStringRule(keyPathRuleKey, false, "")
+	handleErr(err)
+	keyPathRule.Description = "Path to the private key for the Cassandra client"
+	config.Add(keyPathRule)
+
+	keyspaceNameRule, err := cpolicy.NewStringRule(keyspaceNameRuleKey, false, "snap")
+	handleErr(err)
+	keyspaceNameRule.Description = "Keyspace name, default: snap"
+	config.Add(keyspaceNameRule)
+
+	passwordRule, err := cpolicy.NewStringRule(passwordRuleKey, false, "")
+	handleErr(err)
+	passwordRule.Description = "Password used to authenticate to the Cassandra"
+	config.Add(passwordRule)
+
+	portRule, err := cpolicy.NewIntegerRule(portRuleKey, false, 9042)
+	handleErr(err)
+	portRule.Description = "Cassandra server port, default: 9042"
+	config.Add(portRule)
+
 	serverAddrRule, err := cpolicy.NewStringRule(serverAddrRuleKey, true)
 	handleErr(err)
 	serverAddrRule.Description = "Cassandra server"
@@ -80,40 +144,25 @@ func (cas *CassandraPublisher) GetConfigPolicy() (*cpolicy.ConfigPolicy, error) 
 	useSslOptionsRule.Description = "Not required, if true, use ssl options to connect to the Cassandra, default: false"
 	config.Add(useSslOptionsRule)
 
-	usernameRule, err := cpolicy.NewStringRule(usernameRuleKey, false, "")
+	tableNameRule, err := cpolicy.NewStringRule(tableNameRuleKey, false, "metrics")
 	handleErr(err)
-	usernameRule.Description = "Name of a user used to authenticate to Cassandra"
-	config.Add(usernameRule)
-
-	passwordRule, err := cpolicy.NewStringRule(passwordRuleKey, false, "")
-	handleErr(err)
-	passwordRule.Description = "Password used to authenticate to the Cassandra"
-	config.Add(passwordRule)
-
-	keyPathRule, err := cpolicy.NewStringRule(keyPathRuleKey, false, "")
-	handleErr(err)
-	keyPathRule.Description = "Path to the private key for the Cassandra client"
-	config.Add(keyPathRule)
-
-	certPathRule, err := cpolicy.NewStringRule(certPathRuleKey, false, "")
-	handleErr(err)
-	certPathRule.Description = "Path to the self signed certificate for the Cassandra client"
-	config.Add(certPathRule)
-
-	caPathRule, err := cpolicy.NewStringRule(caPathRuleKey, false, "")
-	handleErr(err)
-	caPathRule.Description = "Path to the CA certificate for the Cassandra server"
-	config.Add(caPathRule)
-
-	enableServerCertVerRule, err := cpolicy.NewBoolRule(enableServerCertVerRuleKey, false, true)
-	handleErr(err)
-	enableServerCertVerRule.Description = "If true, verify a hostname and a server key, default: true"
-	config.Add(enableServerCertVerRule)
+	tableNameRule.Description = "Table name, default: metrics"
+	config.Add(tableNameRule)
 
 	tagIndexRule, err := cpolicy.NewStringRule(tagIndexRuleKey, false, "")
 	handleErr(err)
 	tagIndexRule.Description = "Name of tags to be indexed separated by a comma"
 	config.Add(tagIndexRule)
+
+	timeoutRule, err := cpolicy.NewIntegerRule(timeoutRuleKey, false, 2)
+	handleErr(err)
+	timeoutRule.Description = "Connection timeout in seconds, default: 2"
+	config.Add(timeoutRule)
+
+	usernameRule, err := cpolicy.NewStringRule(usernameRuleKey, false, "")
+	handleErr(err)
+	usernameRule.Description = "Name of a user used to authenticate to Cassandra"
+	config.Add(usernameRule)
 
 	cp.Add([]string{""}, config)
 	return cp, nil
@@ -140,23 +189,7 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 
 	// Only initialize client once if possible
 	if cas.client == nil {
-		// Get all values for a new client.
-		useSslOptions, ok := getValueForKey(config, sslOptionsRuleKey).(bool)
-		checkAssertion(ok, sslOptionsRuleKey)
-
-		var sslOptions *sslOptions
-		if useSslOptions {
-			logger.Debug("using ssl options")
-			sslOptions = getSslOptions(config)
-		}
-
-		serverAddr, ok := getValueForKey(config, serverAddrRuleKey).(string)
-		checkAssertion(ok, serverAddrRuleKey)
-
-		co := clientOptions{
-			server: serverAddr,
-			ssl:    sslOptions,
-		}
+		co := prepareClientOptions(config)
 
 		// Initialize a new client.
 		tagIndex, ok := getValueForKey(config, tagIndexRuleKey).(string)
@@ -170,6 +203,47 @@ func (cas *CassandraPublisher) Publish(contentType string, content []byte, confi
 func (cas *CassandraPublisher) Close() {
 	if cas.client != nil {
 		cas.client.session.Close()
+	}
+}
+
+func prepareClientOptions(config map[string]ctypes.ConfigValue) clientOptions {
+	serverAddr, ok := getValueForKey(config, serverAddrRuleKey).(string)
+	checkAssertion(ok, serverAddrRuleKey)
+	serverPort, ok := getValueForKey(config, portRuleKey).(int)
+	checkAssertion(ok, portRuleKey)
+	timeout, ok := getValueForKey(config, timeoutRuleKey).(int)
+	checkAssertion(ok, timeoutRuleKey)
+	connTimeout, ok := getValueForKey(config, connectionTimeoutRuleKey).(int)
+	checkAssertion(ok, connectionTimeoutRuleKey)
+	initialHostLookup, ok := getValueForKey(config, initialHostLookupRuleKey).(bool)
+	checkAssertion(ok, initialHostLookupRuleKey)
+	ignorePeerAddr, ok := getValueForKey(config, ignorePeerAddrRuleKey).(bool)
+	checkAssertion(ok, ignorePeerAddrRuleKey)
+	keyspaceName, ok := getValueForKey(config, keyspaceNameRuleKey).(string)
+	checkAssertion(ok, keyspaceNameRuleKey)
+	createKeyspace, ok := getValueForKey(config, createKeyspaceRuleKey).(bool)
+	checkAssertion(ok, createKeyspaceRuleKey)
+	useSslOptions, ok := getValueForKey(config, sslOptionsRuleKey).(bool)
+	checkAssertion(ok, sslOptionsRuleKey)
+	tableName, ok := getValueForKey(config, tableNameRuleKey).(string)
+	checkAssertion(ok, tableNameRuleKey)
+
+	var sslOptions *sslOptions
+	if useSslOptions {
+		sslOptions = getSslOptions(config)
+	}
+
+	return clientOptions{
+		server:            serverAddr,
+		port:              serverPort,
+		timeout:           time.Duration(timeout) * time.Second,
+		connectionTimeout: time.Duration(connTimeout) * time.Second,
+		initialHostLookup: initialHostLookup,
+		ignorePeerAddr:    ignorePeerAddr,
+		keyspace:          keyspaceName,
+		createKeyspace:    createKeyspace,
+		ssl:               sslOptions,
+		tableName:         tableName,
 	}
 }
 
@@ -223,7 +297,7 @@ func getSslOptions(cfg map[string]ctypes.ConfigValue) *sslOptions {
 
 func handleErr(e error) {
 	if e != nil {
-		log.Fatal(e.Error())
+		log.Fatalf("%s", e.Error())
 	}
 }
 

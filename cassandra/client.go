@@ -36,25 +36,40 @@ var (
 	cassaLog           = log.WithField("_module", "snap-cassandra-clinet")
 	ErrInvalidDataType = errors.New("Invalid data type value found - %v")
 
-	createKeyspaceCQL = "CREATE KEYSPACE IF NOT EXISTS snap WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};"
-	createTableCQL    = "CREATE TABLE IF NOT EXISTS snap.metrics (ns  text, ver int, host text, time timestamp, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((ns, ver, host), time),) WITH CLUSTERING ORDER BY (time DESC);"
-	createTagTableCQL = "CREATE TABLE IF NOT EXISTS snap.tags (key  text, val text, time timestamp, ns text, ver int, host text, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((key, val), time),) WITH CLUSTERING ORDER BY (time DESC);"
+	createKeyspaceCQL = "CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};"
+	createTableCQL    = "CREATE TABLE IF NOT EXISTS %s.%s (ns  text, ver int, host text, time timestamp, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((ns, ver, host), time),) WITH CLUSTERING ORDER BY (time DESC);"
+	createTagTableCQL = "CREATE TABLE IF NOT EXISTS %s.tags (key  text, val text, time timestamp, ns text, ver int, host text, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((key, val), time),) WITH CLUSTERING ORDER BY (time DESC);"
+	insertMetricsCQL  = `INSERT INTO %s.%s (ns, ver, host, time, valtype, %s, tags) VALUES (?, ?, ?, ? ,?, ?, ?)`
+	insertTagsCQL     = `INSERT INTO %s.tags (key, val, time, ns, ver, host, valtype, %s, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`
 )
 
 // NewCassaClient creates a new instance of a cassandra client.
 func NewCassaClient(co clientOptions, tagIndex string) *cassaClient {
-	return &cassaClient{session: getInstance(co), tagsIndex: tagIndex}
+	return &cassaClient{session: getInstance(co), keyspace: co.keyspace, tableName: co.tableName, tagsIndex: tagIndex}
 }
 
 // cassaClient contains a long running Cassandra CQL session
 type cassaClient struct {
 	session   *gocql.Session
 	tagsIndex string
+	keyspace  string
+	tableName string
 }
 
 type clientOptions struct {
 	server string
-	ssl    *sslOptions
+	port   int
+
+	timeout           time.Duration
+	connectionTimeout time.Duration
+	initialHostLookup bool
+	ignorePeerAddr    bool
+
+	createKeyspace bool
+	keyspace       string
+	tableName      string
+
+	ssl *sslOptions
 }
 
 // sslOptions contains configuration for encrypted communication between the app and the server
@@ -84,14 +99,14 @@ func (cc *cassaClient) saveMetrics(mts []plugin.MetricType) error {
 	var err error
 	for _, m := range mts {
 		// insert data into metrics table
-		err = worker(cc.session, m)
+		err = worker(cc.session, cc.keyspace, cc.tableName, m)
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
 
 		// inserts data into tags table if tagIndex config exists
 		vtags := getValidTagIndex(m.Tags(), cc.tagsIndex)
-		err = tagWorker(cc.session, m, vtags)
+		err = tagWorker(cc.session, cc.keyspace, m, vtags)
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
@@ -102,8 +117,44 @@ func (cc *cassaClient) saveMetrics(mts []plugin.MetricType) error {
 	return err
 }
 
+func executeMetricsQuery(keyspace, tableName, insertColumn string, s *gocql.Session, m plugin.MetricType, value interface{}) error {
+	queryStr := fmt.Sprintf(insertMetricsCQL, keyspace, tableName, insertColumn)
+	query := s.Query(queryStr,
+		m.Namespace().String(),
+		m.Version(),
+		m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
+		m.Timestamp(),
+		insertColumn,
+		value,
+		m.Tags())
+
+	if err := query.Exec(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func executeTagsQuery(keyspace, insertColumn, tag string, s *gocql.Session, m plugin.MetricType, value interface{}) error {
+	queryStr := fmt.Sprintf(insertTagsCQL, keyspace, insertColumn)
+	query := s.Query(queryStr,
+		tag,
+		m.Tags()[tag],
+		time.Now(),
+		m.Namespace().String(),
+		m.Version(),
+		m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
+		insertColumn,
+		value,
+		m.Tags())
+
+	if err := query.Exec(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // works insert data into Cassandra DB metrics table only when the data is valid
-func worker(s *gocql.Session, m plugin.MetricType) error {
+func worker(s *gocql.Session, keyspace, tableName string, m plugin.MetricType) error {
 	value, err := convert(m.Data())
 	if err != nil {
 		cassaLog.WithFields(log.Fields{
@@ -114,46 +165,25 @@ func worker(s *gocql.Session, m plugin.MetricType) error {
 
 	switch value.(type) {
 	case float64:
-		if err = s.Query(`INSERT INTO snap.metrics (ns, ver, host, time, valtype, doubleVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?)`,
-			m.Namespace().String(),
-			m.Version(),
-			m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-			m.Timestamp(),
-			"doubleval",
-			value,
-			m.Tags()).Exec(); err != nil {
+		err := executeMetricsQuery(keyspace, tableName, "doubleVal", s, m, value)
+		if err != nil {
 			cassaLog.WithFields(log.Fields{
 				"err": err,
-			}).Error("Cassandra client insertion error")
-			return err
+			}).Error("Cassandra client insertion error ")
 		}
 	case string:
-		if err = s.Query(`INSERT INTO snap.metrics (ns, ver, host, time, valtype, strVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?)`,
-			m.Namespace().String(),
-			m.Version(),
-			m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-			m.Timestamp(),
-			"strval",
-			value,
-			m.Tags()).Exec(); err != nil {
+		err := executeMetricsQuery(keyspace, tableName, "strVal", s, m, value)
+		if err != nil {
 			cassaLog.WithFields(log.Fields{
 				"err": err,
-			}).Error("Cassandra client insertion error")
-			return err
+			}).Error("Cassandra client insertion error ")
 		}
 	case bool:
-		if err = s.Query(`INSERT INTO snap.metrics (ns, ver, host, time, valtype, boolVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?)`,
-			m.Namespace().String(),
-			m.Version(),
-			m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-			m.Timestamp(),
-			"boolval",
-			value,
-			m.Tags()).Exec(); err != nil {
+		err := executeMetricsQuery(keyspace, tableName, "boolVal", s, m, value)
+		if err != nil {
 			cassaLog.WithFields(log.Fields{
 				"err": err,
-			}).Error("Cassandra client insertion error")
-			return err
+			}).Error("Cassandra client insertion error ")
 		}
 	default:
 		return fmt.Errorf(ErrInvalidDataType.Error(), value)
@@ -162,7 +192,7 @@ func worker(s *gocql.Session, m plugin.MetricType) error {
 }
 
 // tagWorker insert data into Cassandra DB tags only when the tags array is not empty.
-func tagWorker(s *gocql.Session, m plugin.MetricType, tags []string) error {
+func tagWorker(s *gocql.Session, keyspace string, m plugin.MetricType, tags []string) error {
 	if len(tags) == 0 {
 		return nil
 	}
@@ -178,56 +208,29 @@ func tagWorker(s *gocql.Session, m plugin.MetricType, tags []string) error {
 	switch value.(type) {
 	case float64:
 		for _, v := range tags {
-			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, doubleVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
-				v,
-				m.Tags()[v],
-				time.Now(),
-				m.Namespace().String(),
-				m.Version(),
-				m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-				"doubleval",
-				value,
-				m.Tags()).Exec(); err != nil {
+			err := executeTagsQuery(keyspace, "doubleVal", v, s, m, value)
+			if err != nil {
 				cassaLog.WithFields(log.Fields{
 					"err": err,
-				}).Error("Cassandra client insertion error")
-				return err
+				}).Error("Cassandra client insertion error ")
 			}
 		}
 	case string:
 		for _, v := range tags {
-			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, strVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
-				v,
-				m.Tags()[v],
-				time.Now(),
-				m.Namespace().String(),
-				m.Version(),
-				m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-				"strval",
-				value,
-				m.Tags()).Exec(); err != nil {
+			err := executeTagsQuery(keyspace, "strVal", v, s, m, value)
+			if err != nil {
 				cassaLog.WithFields(log.Fields{
 					"err": err,
-				}).Error("Cassandra client insertion error")
-				return err
+				}).Error("Cassandra client insertion error ")
 			}
 		}
 	case bool:
 		for _, v := range tags {
-			if err = s.Query(`INSERT INTO snap.tags (key, val, time, ns, ver, host, valtype, boolVal, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`,
-				v,
-				m.Tags()[v],
-				time.Now(),
-				m.Namespace().String(),
-				m.Version(),
-				m.Tags()[core.STD_TAG_PLUGIN_RUNNING_ON],
-				"boolval",
-				value,
-				m.Tags()).Exec(); err != nil {
+			err := executeTagsQuery(keyspace, "boolVal", v, s, m, value)
+			if err != nil {
 				cassaLog.WithFields(log.Fields{
 					"err": err,
-				}).Error("Cassandra client insertion error")
-				return err
+				}).Error("Cassandra client insertion error ")
 			}
 		}
 	default:
@@ -277,21 +280,27 @@ func convert(i interface{}) (interface{}, error) {
 	return num, err
 }
 
-func createCluster(server string) *gocql.ClusterConfig {
-	cluster := gocql.NewCluster(server)
+func createCluster(config clientOptions) *gocql.ClusterConfig {
+	cluster := gocql.NewCluster(config.server)
 	cluster.Consistency = gocql.One
 	cluster.ProtoVersion = 4
+
+	cluster.Timeout = config.timeout
+	cluster.ConnectTimeout = config.connectionTimeout
+
+	cluster.DisableInitialHostLookup = !config.initialHostLookup
+	cluster.IgnorePeerAddr = config.ignorePeerAddr
+
+	if config.ssl != nil {
+		cluster = addSslOptions(cluster, config.ssl)
+	}
+
 	return cluster
 }
 
 func getSession(co clientOptions) *gocql.Session {
-	cluster := createCluster(co.server)
-
-	if co.ssl != nil {
-		cluster = addSslOptions(cluster, co.ssl)
-	}
-
-	session := initializeSession(cluster)
+	cluster := createCluster(co)
+	session := initializeSession(cluster, co)
 	return session
 }
 
@@ -322,21 +331,23 @@ func addSslOptions(cluster *gocql.ClusterConfig, options *sslOptions) *gocql.Clu
 	return cluster
 }
 
-func initializeSession(cluster *gocql.ClusterConfig) *gocql.Session {
+func initializeSession(cluster *gocql.ClusterConfig, co clientOptions) *gocql.Session {
 	session, err := cluster.CreateSession()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	if err := session.Query(createKeyspaceCQL).Exec(); err != nil {
+	if co.createKeyspace {
+		if err := session.Query(fmt.Sprintf(createKeyspaceCQL, co.keyspace)).Exec(); err != nil {
+			log.Fatal(err.Error())
+		}
+	}
+
+	if err := session.Query(fmt.Sprintf(createTableCQL, co.keyspace, co.tableName)).Exec(); err != nil {
 		log.Fatal(err.Error())
 	}
 
-	if err := session.Query(createTableCQL).Exec(); err != nil {
-		log.Fatal(err.Error())
-	}
-
-	if err := session.Query(createTagTableCQL).Exec(); err != nil {
+	if err := session.Query(fmt.Sprintf(createTagTableCQL, co.keyspace)).Exec(); err != nil {
 		log.Fatal(err.Error())
 	}
 	return session

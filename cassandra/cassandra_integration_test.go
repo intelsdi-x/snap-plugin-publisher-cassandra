@@ -35,11 +35,19 @@ import (
 )
 
 const (
+	connectionTimeout            = 2
+	shouldCreateKeyspace         = true
+	enableServerCertVerification = false
+	ignorePeerAddr               = false
+	initialHostLookup            = true
+	keyspaceName                 = "snap"
+	tableName                    = "foo"
+	password                     = "password"
+	port                         = 9042
 	serverAddress                = "127.0.0.1"
 	sslOptionsFlag               = true
+	timeout                      = 2
 	username                     = "username"
-	password                     = "password"
-	enableServerCertVerification = false
 )
 
 func TestCassandraPublish(t *testing.T) {
@@ -54,9 +62,17 @@ func TestCassandraPublish(t *testing.T) {
 			log.Fatal("SNAP_CASSANDRA_HOST is not set")
 		}
 
+		config[connectionTimeoutRuleKey] = ctypes.ConfigValueInt{Value: connectionTimeout}
+		config[createKeyspaceRuleKey] = ctypes.ConfigValueBool{Value: shouldCreateKeyspace}
+		config[ignorePeerAddrRuleKey] = ctypes.ConfigValueBool{Value: ignorePeerAddr}
+		config[initialHostLookupRuleKey] = ctypes.ConfigValueBool{Value: initialHostLookup}
+		config[keyspaceNameRuleKey] = ctypes.ConfigValueStr{Value: keyspaceName}
+		config[portRuleKey] = ctypes.ConfigValueInt{Value: port}
 		config[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: hostip}
 		config[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: false}
 		config[tagIndexRuleKey] = ctypes.ConfigValueStr{Value: "experimentId,mode,year"}
+		config[timeoutRuleKey] = ctypes.ConfigValueInt{Value: timeout}
+		config[tableNameRuleKey] = ctypes.ConfigValueStr{Value: tableName}
 
 		Convey("Publish integer metric", func() {
 			tags := map[string]string{core.STD_TAG_PLUGIN_RUNNING_ON: "hostname", "experimentId": "101"}

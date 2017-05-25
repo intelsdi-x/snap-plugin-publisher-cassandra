@@ -31,12 +31,14 @@ import (
 )
 
 const (
-	serverAddress                = "127.0.0.1"
-	sslOptionsFlag               = true
-	username                     = "username"
+	enableServerCertVerification = false
+	keyspaceName                 = "snap"
 	password                     = "password"
 	path                         = "/some/path"
-	enableServerCertVerification = false
+	serverAddress                = "127.0.0.1"
+	sslOptionsFlag               = true
+	tableName                    = "metrics"
+	username                     = "username"
 )
 
 func TestCassandraDBPlugin(t *testing.T) {
@@ -125,14 +127,16 @@ func TestSslOptions(t *testing.T) {
 
 		// Prepare test config with ssl options.
 		testConfig := make(map[string]ctypes.ConfigValue)
-		testConfig[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: serverAddress}
-		testConfig[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: sslOptionsFlag}
-		testConfig[usernameRuleKey] = ctypes.ConfigValueStr{Value: username}
-		testConfig[passwordRuleKey] = ctypes.ConfigValueStr{Value: password}
 		testConfig[caPathRuleKey] = ctypes.ConfigValueStr{Value: path}
 		testConfig[certPathRuleKey] = ctypes.ConfigValueStr{Value: path}
-		testConfig[keyPathRuleKey] = ctypes.ConfigValueStr{Value: path}
 		testConfig[enableServerCertVerRuleKey] = ctypes.ConfigValueBool{Value: enableServerCertVerification}
+		testConfig[keyPathRuleKey] = ctypes.ConfigValueStr{Value: path}
+		testConfig[keyspaceName] = ctypes.ConfigValueStr{Value: keyspaceName}
+		testConfig[passwordRuleKey] = ctypes.ConfigValueStr{Value: password}
+		testConfig[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: serverAddress}
+		testConfig[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: sslOptionsFlag}
+		testConfig[tableNameRuleKey] = ctypes.ConfigValueStr{Value: tableName}
+		testConfig[usernameRuleKey] = ctypes.ConfigValueStr{Value: username}
 
 		cfg, errs := configPolicy.Get([]string{""}).Process(testConfig)
 		Convey("So config policy should return a config after processing testConfig with valid ssl options", func() {
@@ -147,9 +151,10 @@ func TestSslOptions(t *testing.T) {
 		Convey("So received ssl options struct should have proper values for all keys", func() {
 			So(reflect.DeepEqual(expectedSslOptions, receivedSslOptions), ShouldBeTrue)
 		})
+		config := prepareClientOptions(testConfig)
 
 		// Prepare cluster for a given address.
-		cluster := createCluster(serverAddress)
+		cluster := createCluster(config)
 		Convey("So while creating cluster it should not be nil", func() {
 			So(cluster, ShouldNotBeNil)
 		})
@@ -168,14 +173,16 @@ func TestSslOptions(t *testing.T) {
 
 		// Prepare test config with invalid ssl options.
 		testConfig = make(map[string]ctypes.ConfigValue)
+		testConfig[caPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[certPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[enableServerCertVerRuleKey] = ctypes.ConfigValueStr{Value: ""}
+		testConfig[keyPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
+		testConfig[passwordRuleKey] = ctypes.ConfigValueInt{Value: 0}
 		testConfig[serverAddrRuleKey] = ctypes.ConfigValueStr{Value: serverAddress}
 		testConfig[sslOptionsRuleKey] = ctypes.ConfigValueBool{Value: sslOptionsFlag}
 		testConfig[usernameRuleKey] = ctypes.ConfigValueInt{Value: 0}
-		testConfig[passwordRuleKey] = ctypes.ConfigValueInt{Value: 0}
-		testConfig[caPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
-		testConfig[certPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
-		testConfig[keyPathRuleKey] = ctypes.ConfigValueInt{Value: 0}
-		testConfig[enableServerCertVerRuleKey] = ctypes.ConfigValueStr{Value: ""}
+		testConfig[tableNameRuleKey] = ctypes.ConfigValueStr{Value: tableName}
+		testConfig[keyspaceName] = ctypes.ConfigValueStr{Value: keyspaceName}
 
 		cfg, errs = configPolicy.Get([]string{""}).Process(testConfig)
 		Convey("So config policy should not return a config after processing testConfig with invalid ssl options", func() {

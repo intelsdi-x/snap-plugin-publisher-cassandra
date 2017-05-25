@@ -3,7 +3,7 @@ import:
 - package: github.com/Sirupsen/logrus
   version: be52937128b38f1d99787bb476c789e2af1147f1
 - package: github.com/gocql/gocql
-  version: 03ae28ccfc4fa086afea7fcec681bf7ff60f0346
+  version: f8b6dcaf4f8a770652c11e7e94b517fcb706fce8
   subpackages:
   - internal/lru
   - internal/murmur
