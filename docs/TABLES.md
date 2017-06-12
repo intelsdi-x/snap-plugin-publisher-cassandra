@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS snap.metrics (
     strVal text, 
     boolVal boolean, 
     tags map<text,text>, 
-    PRIMARY KEY ((ns, ver, host), time),
+    PRIMARY KEY ((ns, ver, host), time))
 ) WITH CLUSTERING ORDER BY (time DESC);
 ```
 
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS snap.tags (
     strVal text,   
     boolVal boolean,   
     tags map<text,text>,   
-    PRIMARY KEY ((key, val), ns, ver, host, time),
+    PRIMARY KEY ((key, val), time, ns, ver, host))
 ) WITH CLUSTERING ORDER BY (time DESC);
  ```
 

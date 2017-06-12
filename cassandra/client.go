@@ -37,8 +37,8 @@ var (
 	ErrInvalidDataType = errors.New("Invalid data type value found - %v")
 
 	createKeyspaceCQL = "CREATE KEYSPACE IF NOT EXISTS %s WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1};"
-	createTableCQL    = "CREATE TABLE IF NOT EXISTS %s.%s (ns  text, ver int, host text, time timestamp, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((ns, ver, host), time),) WITH CLUSTERING ORDER BY (time DESC);"
-	createTagTableCQL = "CREATE TABLE IF NOT EXISTS %s.tags (key  text, val text, time timestamp, ns text, ver int, host text, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((key, val), ns, ver, host, time),) WITH CLUSTERING ORDER BY (time DESC);"
+	createTableCQL    = "CREATE TABLE IF NOT EXISTS %s.%s (ns  text, ver int, host text, time timestamp, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((ns, ver, host), time)) WITH CLUSTERING ORDER BY (time DESC);"
+	createTagTableCQL = "CREATE TABLE IF NOT EXISTS %s.tags (key  text, val text, time timestamp, ns text, ver int, host text, valType text, doubleVal double, strVal text, boolVal boolean, tags map<text,text>, PRIMARY KEY ((key, val), time, ns, ver, host)) WITH CLUSTERING ORDER BY (time DESC);"
 	insertMetricsCQL  = `INSERT INTO %s.%s (ns, ver, host, time, valtype, %s, tags) VALUES (?, ?, ?, ? ,?, ?, ?)`
 	insertTagsCQL     = `INSERT INTO %s.tags (key, val, time, ns, ver, host, valtype, %s, tags) VALUES (?, ?, ?, ? ,?, ?, ?, ?, ?)`
 )
