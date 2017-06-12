@@ -92,7 +92,7 @@ CREATE TABLE snap.tags (
     strVal text,   
     boolVal boolean,   
     tags map<text,text>,   
-    PRIMARY KEY ((key, val), time),
+    PRIMARY KEY ((key, val), ns, ver, host, time),
 ) WITH CLUSTERING ORDER BY (time DESC);
 ```
 
