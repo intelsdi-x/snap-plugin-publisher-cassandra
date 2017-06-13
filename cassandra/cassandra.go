@@ -35,7 +35,7 @@ import (
 
 const (
 	name       = "cassandra"
-	version    = 6
+	version    = 7
 	pluginType = plugin.PublisherPluginType
 
 	caPathRuleKey              = "caPath"
