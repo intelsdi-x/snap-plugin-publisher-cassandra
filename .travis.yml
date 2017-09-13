@@ -2,10 +2,10 @@
 sudo: true
 language: go
 go:
-- 1.6.3
-- 1.7.3
+- 1.7.x
+- 1.8.x
 services:
-  - docker
+- docker
 env:
   global:
   - ORG_PATH=/home/travis/gopath/src/github.com/intelsdi-x
@@ -13,10 +13,10 @@ env:
   matrix:
   - TEST_TYPE=small
   - TEST_TYPE=medium
-  - TEST_TYPE=build
+  - TEST_TYPE: build
 matrix:
   exclude:
-  - go: 1.6.3
+  - go: 1.7.x
     env: TEST_TYPE=build
 before_install:
 - "[[ -d $SNAP_PLUGIN_SOURCE ]] || mkdir -p $ORG_PATH && ln -s $TRAVIS_BUILD_DIR $SNAP_PLUGIN_SOURCE"
@@ -32,41 +32,3 @@ notifications:
 before_deploy:
 - "./scripts/pre_deploy.sh"
 deploy:
-- provider: s3
-  access_key_id: AKIAINMB43VSSPFZISAA
-  secret_access_key:
-    secure: E8bFj/Q5OYeR+kEozs6922S+2HkbGDZHm7Dd5Ki74xQSPq5se4J1wWL9RwRVQ40qVxTxE1yoe36/VvtCy/sLzZW+yCQQdVf60ZZOQh33s1cBRlouDSF2JknGDS3l/+NNdFB0nOBjghpF4fupp0MK86S0xEesYVYH5BSQ9nBqX2NhgWJK2dzmFQxB+O9TAX7kKFlmKnnO5Ed1IPNVJgESiZyZSlCwbT7A925hy8YokohoCDIo89Srnk805HT8ITQzedXRFV1Pd0ZQD+BPN2gsTkl2S9ewPJfii17nQ6GeSndAgudAPwOw/0tMFdkphBNxS0Xc4cnnbJWzUK7Ew0RPkM3w0HuM/cBCFtOx/NiVY2fl2wn+FO/vm5OKwge1PUj7VKigmQu/9LR612QrB479IkIGGuHh6VssKbUejWr9XMb6o9rKAE8vAWdL859I2x6XOABBDbVjKkTL2g4L/JFrns+tow9LFKy/KuPuAR3LqG1atIe/kM3j5ORuHemJO6nZlkdGq13GX8VYtvxbH7/nEqIAQZRbduAtUcYIM8TD6vSIhnSqXjxIwLNWGl6OFkyF6ZRqfOxgo4pxKkKJPHXX7rFWZdll0WUzhB2qGVMNPgVX76A73hA7o6g8g5I6P1Qcq47Rh1t0ZV58iE1dFL6eMUnFzEszcMG9izikVSgSWMY=
-  bucket: snap.ci.snap-telemetry.io
-  region: us-west-2
-  skip_cleanup: true
-  local-dir: s3
-  upload-dir: plugins
-  acl: public_read
-  on:
-    repo: intelsdi-x/snap-plugin-publisher-cassandra
-    branch: master
-    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.3"
-- provider: s3
-  access_key_id: AKIAINMB43VSSPFZISAA
-  secret_access_key:
-    secure: E8bFj/Q5OYeR+kEozs6922S+2HkbGDZHm7Dd5Ki74xQSPq5se4J1wWL9RwRVQ40qVxTxE1yoe36/VvtCy/sLzZW+yCQQdVf60ZZOQh33s1cBRlouDSF2JknGDS3l/+NNdFB0nOBjghpF4fupp0MK86S0xEesYVYH5BSQ9nBqX2NhgWJK2dzmFQxB+O9TAX7kKFlmKnnO5Ed1IPNVJgESiZyZSlCwbT7A925hy8YokohoCDIo89Srnk805HT8ITQzedXRFV1Pd0ZQD+BPN2gsTkl2S9ewPJfii17nQ6GeSndAgudAPwOw/0tMFdkphBNxS0Xc4cnnbJWzUK7Ew0RPkM3w0HuM/cBCFtOx/NiVY2fl2wn+FO/vm5OKwge1PUj7VKigmQu/9LR612QrB479IkIGGuHh6VssKbUejWr9XMb6o9rKAE8vAWdL859I2x6XOABBDbVjKkTL2g4L/JFrns+tow9LFKy/KuPuAR3LqG1atIe/kM3j5ORuHemJO6nZlkdGq13GX8VYtvxbH7/nEqIAQZRbduAtUcYIM8TD6vSIhnSqXjxIwLNWGl6OFkyF6ZRqfOxgo4pxKkKJPHXX7rFWZdll0WUzhB2qGVMNPgVX76A73hA7o6g8g5I6P1Qcq47Rh1t0ZV58iE1dFL6eMUnFzEszcMG9izikVSgSWMY=
-  bucket: snap.ci.snap-telemetry.io
-  region: us-west-2
-  skip_cleanup: true
-  local-dir: s3
-  upload-dir: plugins
-  acl: public_read
-  on:
-    repo: intelsdi-x/snap-plugin-publisher-cassandra
-    tags: true
-    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.3"
-- provider: releases
-  api_key:
-    secure: sTnyOEG/3+L0sF92mEHWBBgjs9nROrk7KNEX6UWuLDRORkkuA3+QWHHo1HkVlCDLPeallitDvXGlQK1ToWM0BQUcZYgQ4Wy1JeovMUfFnLcAts5EQTp8e9L4R9CiAb4+yhIiPbYbISxlHzKNRuVWLSGzG9vDz8lVadWwne7TPegIIFf92fddmeP6VbClhvgrHtY+zDuhs0pRQ6EcxLGPkpUf3Pbi9MrZhF/Q9m8zn7cpDECJPi0VoRVk6rZ95++vJDDdXuM20pxOUrnJklRSSbzK8apqwiS+7DZQU0KFXwzSLtRHO91TTcvcPdstM8A6uoDvwVHv/gAawEr7/0tUT0vIh9DidJckqr/o7K50ch3Rjn4lfJz/QGTJq4vSP7EDXNnw6Rgw5DzMUo+s4P1gy41Du/V1/zihkh0X5vVZ2+qgFRQv1tKwjajhpE1b7/kkRaO/MEn6Q2Xv7LxbgqLW9prAr5hfYeKvscA7J3RhxmV1M+9oIplKCMWZ7vsADbTfGp2afuev901VyTsO2QxEL7xdeVwmVG5hC8JnTvhRwDV8F3QgvnagxvQ99h4ssL7DFZHh2XZ8dL8iWiqa5qMJWfbMnAqSM+IvmhmTDyWkN+Az9QCh+Zyb/QwFoVS+8oI23+CwgPk4ADNWyUNu82pFWLzQRnXiZ5a63rirf73Hdqc=
-  file:
-    - release/snap-plugin-publisher-cassandra_linux_x86_64
-  skip_cleanup: true
-  on:
-    repo: intelsdi-x/snap-plugin-publisher-cassandra
-    tags: true
-    condition: $TEST_TYPE = "build" && $TRAVIS_GO_VERSION = "1.7.3"
