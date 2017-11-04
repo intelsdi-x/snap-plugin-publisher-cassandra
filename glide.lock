@@ -1,6 +1,8 @@
-hash: e3649f79d3a330272250bab0c35dec63d4fde8f9d47063cd00247177d94fc56a
-updated: 2017-04-06T12:00:49.756312993+02:00
+hash: 469a4a2dad30fe80007abdcc7353186dd72ca5fd1794ae326fadf9b96aa8c5f2
+updated: 2017-11-03T05:13:52.427731705+08:00
 imports:
+- name: github.com/asaskevich/govalidator
+  version: 9699ab6b38bee2e02cd3fe8b99ecf67665395c96
 - name: github.com/gocql/gocql
   version: f8b6dcaf4f8a770652c11e7e94b517fcb706fce8
   subpackages:
@@ -16,7 +18,7 @@ imports:
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/intelsdi-x/snap
-  version: 8f3ac356e8d56a59b65a728fc94d2241030db535
+  version: 79e1dd457d77c985491c2f4746cbc425fb3dc2dd
   subpackages:
   - control/plugin
   - control/plugin/cpolicy
@@ -27,6 +29,7 @@ imports:
   - core/ctypes
   - core/serror
   - pkg/ctree
+  - pkg/fileutils
   - pkg/schedule
   - pkg/stringutils
   - scheduler/wmap
@@ -34,7 +37,7 @@ imports:
   version: 8ddce2a84170772b95dd5d576c48d517b22cac63
 - name: github.com/robfig/cron
   version: 32d9c273155a0506d27cf73dd1246e86a470997e
-- name: github.com/Sirupsen/logrus
+- name: github.com/sirupsen/logrus
   version: be52937128b38f1d99787bb476c789e2af1147f1
 - name: github.com/smartystreets/assertions
   version: 443d812296a84445c202c085f19e18fc238f8250
@@ -51,8 +54,6 @@ imports:
   version: 04557861f124410b768b1ba5bb3a91b705afbfc6
   subpackages:
   - context
-  - http2
-  - trace
 - name: golang.org/x/sys
   version: c8bc69bc2db9c57ccf979550bc69655df5039a8a
   subpackages:
